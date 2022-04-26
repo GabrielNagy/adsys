@@ -1,6 +1,7 @@
 # Binaries for programs, uncommited generated code and plugins
 cmd/adsysd/adsysd
 cmd/admxgen/admxgen
+cmd/adwatchd/adwatchd
 generated/
 __pycache__/
 
