@@ -13,16 +13,11 @@ func (a *App) installRun() {
 
 	cmd := &cobra.Command{
 		Use:   "run",
-		Short: "A brief description of your command",
-		Long: `A longer description that spans multiple lines and likely contains examples
-	and usage of using your command. For example:
-
-	Cobra is a CLI library for Go that empowers applications.
-	This application is a tool to generate the needed files
-	to quickly create a Cobra application.`,
+		Short: i18n.G("Starts the watchd service"),
+		Long:  i18n.G(`Can be run through the service manager a service or interactively as a standalone application.`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(a.config.Dirs) < 1 {
-				return fmt.Errorf(i18n.G("run commands needs some directorie to watch either with --dirs or in the configuration file"))
+				return fmt.Errorf(i18n.G("run commands needs at least one directory to watch either with --dirs or in the configuration file"))
 			}
 			fmt.Println(a.config.Verbose)
 			service, err := watchdservice.New(context.Background(), a.config.Dirs)

@@ -24,6 +24,7 @@ const (
 	refreshDuration = 10 * time.Second
 )
 
+// Watcher provides options necessary to watch a directory and its children.
 type Watcher struct {
 	dirs      []string
 	parentCtx context.Context
@@ -31,6 +32,7 @@ type Watcher struct {
 	watching  chan struct{}
 }
 
+// New returns a new Watcher instance.
 func New(ctx context.Context, dirs []string) (*Watcher, error) {
 	return &Watcher{
 		dirs: dirs,
@@ -39,6 +41,7 @@ func New(ctx context.Context, dirs []string) (*Watcher, error) {
 	}, nil
 }
 
+// Start is called by the service manager to start the watcher service.
 func (w *Watcher) Start(s service.Service) error {
 	ctx, cancel := context.WithCancel(w.parentCtx)
 	w.cancel = cancel
@@ -47,6 +50,7 @@ func (w *Watcher) Start(s service.Service) error {
 	return nil
 }
 
+// Stop is called by the service manager to stop the watcher service.
 func (w *Watcher) Stop(s service.Service) (err error) {
 	decorate.OnError(&err, i18n.G("can't stop service"))
 
@@ -59,6 +63,7 @@ func (w *Watcher) Stop(s service.Service) (err error) {
 	return nil
 }
 
+// UpdateDirs restarts the watch loop with new directories.
 func (w *Watcher) UpdateDirs(dirs []string) error {
 	if w.cancel == nil {
 		return errors.New(i18n.G("can't update directory on a non running watcher"))
@@ -227,7 +232,7 @@ func updateVersions(ctx context.Context, modifiedRootDirs []string) {
 	for _, dir := range modifiedRootDirs {
 		gptIniPath := filepath.Join(dir, gptFileName)
 		if err := bumpVersion(ctx, gptIniPath); err != nil {
-			log.Warningf(ctx, "Failed to bump %s version under: %s", gptIniPath, err)
+			log.Warningf(ctx, "Failed to bump %s version: %s", gptIniPath, err)
 		}
 	}
 }
@@ -236,17 +241,21 @@ func bumpVersion(ctx context.Context, path string) (err error) {
 	decorate.OnError(&err, i18n.G("can't bump version for %s"), path)
 	log.Infof(ctx, "Bumping version for %s", path)
 
-	cfg, err := ini.Load(path)
+	cfg, err := ini.LooseLoad(path)
 	if err != nil {
-		// TODO: create an ini file content by default
+		return fmt.Errorf("error loading ini contents: %v", err)
 	}
-	v, err := cfg.Section("general").Key("version").Int()
+
+	v, err := cfg.Section("General").Key("Version").Int()
 	if err != nil {
-		return fmt.Errorf("version is not a valid integer: %v", err)
+		// can also use MustInt here if we want to implicitly default to 0
+		// the downside is that we cannot log a meaningful message
+		log.Warningf(ctx, "current version is not valid or GPT.ini does not exist, defaulting to 1: %v", err)
+		v = 0
 	}
 
 	v++
-	cfg.Section("general").Key("version").SetValue(strconv.Itoa(v))
+	cfg.Section("General").Key("Version").SetValue(strconv.Itoa(v))
 
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {

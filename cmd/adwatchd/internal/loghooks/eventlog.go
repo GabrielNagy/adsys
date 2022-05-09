@@ -5,7 +5,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// EventLog to send logs via windows/journal log.
+// EventLog sends logs via Windows/journal log.
 type EventLog struct {
 	service.Logger
 }
