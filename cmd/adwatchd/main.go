@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/viper"
 	"golang.org/x/exp/slices"
 
+	"github.com/ubuntu/adsys/cmd/adwatchd/internal/watchdservice"
 	"github.com/ubuntu/adsys/internal/cmdhandler"
 	"github.com/ubuntu/adsys/internal/config"
 	"github.com/ubuntu/adsys/internal/consts"
@@ -19,7 +20,8 @@ type App struct {
 	rootCmd cobra.Command
 	viper   *viper.Viper
 
-	config appConfig
+	config  appConfig
+	service *watchdservice.WatchdService
 }
 
 type appConfig struct {
@@ -56,14 +58,15 @@ func New() App {
 
 				// Reload necessary parts
 				oldVerbose := a.config.Verbose
+				oldDirs := a.config.Dirs
 				a.config = newConfig
 				if oldVerbose != a.config.Verbose {
 					config.SetVerboseMode(a.config.Verbose)
 				}
-				oldDirs := a.config.Dirs
-				a.config = newConfig
 				if !slices.Equal(oldDirs, a.config.Dirs) {
-					// TODO
+					if a.service != nil {
+						a.service.UpdateDirs(a.config.Dirs)
+					}
 				}
 
 				return nil
@@ -93,6 +96,7 @@ func New() App {
 
 	// subcommands
 	a.installRun()
+	a.installService()
 
 	return a
 }

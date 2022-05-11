@@ -20,92 +20,140 @@ import (
 
 const (
 	gptFileName = "gpt.ini"
-	// TODO: let user define this?
-	refreshDuration = 10 * time.Second
 )
 
 // Watcher provides options necessary to watch a directory and its children.
 type Watcher struct {
+	// TODO: do we need to store dirs here?
 	dirs      []string
 	parentCtx context.Context
 	cancel    context.CancelFunc
 	watching  chan struct{}
+
+	refreshDuration time.Duration
 }
 
+type options struct {
+	refreshDuration time.Duration
+}
+type option func(*options) error
+
 // New returns a new Watcher instance.
-func New(ctx context.Context, dirs []string) (*Watcher, error) {
+func New(ctx context.Context, dirs []string, opts ...option) (*Watcher, error) {
+	if len(dirs) == 0 {
+		return nil, errors.New(i18n.G("no directories to watch"))
+	}
+
+	args := options{
+		refreshDuration: 10 * time.Second,
+	}
+	// applied options
+	for _, o := range opts {
+		if err := o(&args); err != nil {
+			return nil, err
+		}
+	}
+
 	return &Watcher{
 		dirs: dirs,
 
-		parentCtx: ctx,
+		parentCtx:       ctx,
+		refreshDuration: args.refreshDuration,
 	}, nil
 }
 
 // Start is called by the service manager to start the watcher service.
-func (w *Watcher) Start(s service.Service) error {
+func (w *Watcher) Start(s service.Service) (err error) {
+	decorate.OnError(&err, i18n.G("can't start service"))
+
+	return w.startWatch(w.parentCtx, w.dirs)
+}
+
+func (w *Watcher) startWatch(ctx context.Context, dirs []string) error {
 	ctx, cancel := context.WithCancel(w.parentCtx)
 	w.cancel = cancel
 
-	go w.watch(ctx, w.dirs)
-	return nil
+	w.watching = make(chan struct{})
+	initError := make(chan error)
+	go func() {
+		if errWatching := w.watch(ctx, w.dirs, initError); errWatching != nil {
+			log.Warningf(ctx, "Watch failed: %v", errWatching)
+		}
+	}()
+	return <-initError
 }
 
 // Stop is called by the service manager to stop the watcher service.
 func (w *Watcher) Stop(s service.Service) (err error) {
 	decorate.OnError(&err, i18n.G("can't stop service"))
 
+	return w.stopWatch(w.parentCtx)
+}
+
+func (w *Watcher) stopWatch(ctx context.Context) error {
 	if w.cancel == nil {
 		return errors.New(i18n.G("the service is already stopping or not running"))
 	}
 
 	w.cancel()
 	w.cancel = nil
-	return nil
-}
 
-// UpdateDirs restarts the watch loop with new directories.
-func (w *Watcher) UpdateDirs(dirs []string) error {
-	if w.cancel == nil {
-		return errors.New(i18n.G("can't update directory on a non running watcher"))
+	// wait for watching to be closed
+	for {
+		_, ok := <-w.watching
+		if ok {
+			continue
+		}
+		break
 	}
 
-	w.cancel()
-	<-w.watching
-
-	ctx, cancel := context.WithCancel(w.parentCtx)
-	w.cancel = cancel
-
-	w.dirs = dirs
-	go w.watch(ctx, w.dirs)
 	return nil
 }
 
-func (w *Watcher) watch(ctx context.Context, dirs []string) (err error) {
-	decorate.OnError(&err, i18n.G("can't watch over %v"), dirs)
+// UpdateDirs restarts watch loop with new directories.
+func (w *Watcher) UpdateDirs(dirs []string) error {
+	log.Debugf(w.parentCtx, "Updating directories to %v", dirs)
 
-	w.watching = make(chan struct{})
+	for _, dir := range dirs {
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			log.Warningf(w.parentCtx, "Directory %v does not exist, continuing to watch current directories", dir)
+			return nil
+		}
+	}
+
+	if err := w.stopWatch(w.parentCtx); err != nil {
+		return err
+	}
+
+	w.dirs = dirs
+	return w.startWatch(w.parentCtx, dirs)
+}
+
+func (w *Watcher) watch(ctx context.Context, dirs []string, initError chan<- error) (err error) {
+	decorate.OnError(&err, i18n.G("can't watch over %v"), dirs)
 	defer close(w.watching)
 
 	fsWatcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return err
+		initError <- err
 	}
 	defer fsWatcher.Close()
 
 	// Collect directories to watch.
 	for _, dir := range dirs {
 		if err := watchSubDirs(ctx, fsWatcher, dir); err != nil {
-			return err
+			initError <- err
 		}
 	}
 
 	// We have a grace period of 10s without any changes before committing the changes.
-	refreshTimer := time.NewTimer(refreshDuration)
+	refreshTimer := time.NewTimer(w.refreshDuration)
 	defer refreshTimer.Stop()
 	refreshTimer.Stop()
 
 	// Collect directories to watch.
 	var modifiedRootDirs []string
+	initError <- nil
 	for {
 		select {
 		case event, ok := <-fsWatcher.Events:
@@ -120,10 +168,11 @@ func (w *Watcher) watch(ctx context.Context, dirs []string) (err error) {
 			}
 
 			// Add new detected files and directories for content to watch.
-			if event.Op&fsnotify.Create == fsnotify.Create || event.Op&fsnotify.Rename == fsnotify.Rename {
+			if event.Op&fsnotify.Create == fsnotify.Create {
 				fileInfo, err := os.Stat(event.Name)
 				if err != nil {
-					log.Warningf(ctx, "Failed to stat %s: %s", event.Name, err)
+					log.Warningf(ctx, "Failed to stat: %s", err)
+					continue
 				}
 
 				if fileInfo.IsDir() {
@@ -141,7 +190,9 @@ func (w *Watcher) watch(ctx context.Context, dirs []string) (err error) {
 			}
 
 			// Check there is something to update
-			if !(event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create) {
+			if !(event.Op&fsnotify.Write == fsnotify.Write ||
+				event.Op&fsnotify.Create == fsnotify.Create || // Rename is always followed by a Create.
+				event.Op&fsnotify.Remove == fsnotify.Remove) {
 				continue
 			}
 
@@ -171,7 +222,7 @@ func (w *Watcher) watch(ctx context.Context, dirs []string) (err error) {
 				default:
 				}
 			}
-			refreshTimer.Reset(refreshDuration)
+			refreshTimer.Reset(w.refreshDuration)
 
 		case err, ok := <-fsWatcher.Errors:
 			if ok {
@@ -241,17 +292,16 @@ func bumpVersion(ctx context.Context, path string) (err error) {
 	decorate.OnError(&err, i18n.G("can't bump version for %s"), path)
 	log.Infof(ctx, "Bumping version for %s", path)
 
-	cfg, err := ini.LooseLoad(path)
+	cfg, err := ini.Load(path)
 	if err != nil {
-		return fmt.Errorf("error loading ini contents: %v", err)
+		log.Warningf(ctx, "error loading ini contents: %v, creating a new file", err)
+		cfg = ini.Empty()
+		cfg.Section("General").NewKey("Version", "0")
 	}
 
 	v, err := cfg.Section("General").Key("Version").Int()
 	if err != nil {
-		// can also use MustInt here if we want to implicitly default to 0
-		// the downside is that we cannot log a meaningful message
-		log.Warningf(ctx, "current version is not valid or GPT.ini does not exist, defaulting to 1: %v", err)
-		v = 0
+		return err
 	}
 
 	v++

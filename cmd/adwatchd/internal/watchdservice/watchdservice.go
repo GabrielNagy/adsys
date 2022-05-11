@@ -26,8 +26,8 @@ func New(ctx context.Context, dirs []string) (*WatchdService, error) {
 	config := service.Config{
 		Name:        "adwatchd",
 		DisplayName: "Active Directory Watch Daemon",
-		Description: "Monitors configured directories for changes and increases associated GPT.ini version.",
-		////Arguments:   []string{"run"},
+		Description: "Monitors configured directories for changes and increases the associated GPT.ini version.",
+		Arguments:   []string{"run"},
 	}
 	s, err := service.New(watcher, &config)
 	if err != nil {
@@ -48,6 +48,11 @@ func New(ctx context.Context, dirs []string) (*WatchdService, error) {
 	}, nil
 }
 
+// UpdateDirs updates the watcher with the new directories.
+func (s *WatchdService) UpdateDirs(dirs []string) error {
+	return s.watcher.UpdateDirs(dirs)
+}
+
 // Start starts the watcher service.
 func (s *WatchdService) Start() error {
 	return nil
@@ -61,6 +66,11 @@ func (s *WatchdService) Stop() error {
 // Restart restarts the watcher service.
 func (s *WatchdService) Restart() error {
 	return nil
+}
+
+// Status provides a status of the watcher service.
+func (s *WatchdService) Status() string {
+	return ""
 }
 
 // Install installs the watcher service.
