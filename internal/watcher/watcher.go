@@ -61,6 +61,11 @@ func New(ctx context.Context, dirs []string, opts ...option) (*Watcher, error) {
 	}, nil
 }
 
+// Dirs returns the directories currently being watched.
+func (w *Watcher) Dirs() []string {
+	return w.dirs
+}
+
 // Start is called by the service manager to start the watcher service.
 func (w *Watcher) Start(s service.Service) (err error) {
 	decorate.OnError(&err, i18n.G("can't start service"))
@@ -112,13 +117,13 @@ func (w *Watcher) stopWatch(ctx context.Context) error {
 // UpdateDirs restarts watch loop with new directories.
 func (w *Watcher) UpdateDirs(dirs []string) (err error) {
 	decorate.OnError(&err, i18n.G("can't update directories to watch"))
-	log.Debugf(w.parentCtx, "Updating directories to %v", dirs)
-
 	for _, dir := range dirs {
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			return fmt.Errorf(i18n.G("directory %v does not exist"), dir)
 		}
 	}
+
+	log.Debugf(w.parentCtx, "Updating directories to %v", dirs)
 
 	if err := w.stopWatch(w.parentCtx); err != nil {
 		return err
