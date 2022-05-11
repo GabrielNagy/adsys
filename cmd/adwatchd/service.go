@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -30,10 +31,10 @@ Additionally, it can be used to check the status of the service and also install
 func (a *App) serviceStart() *cobra.Command {
 	return &cobra.Command{
 		Use:   "start",
-		Short: i18n.G("Starts the adwatchd service"),
+		Short: i18n.G("Starts the service"),
 		Long:  i18n.G(`Starts the adwatchd service.`),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.service.Start()
+			return a.service.Start(context.Background())
 		},
 	}
 }
@@ -44,7 +45,7 @@ func (a *App) serviceStop() *cobra.Command {
 		Short: i18n.G("Stops the adwatchd service"),
 		Long:  i18n.G(`Stops the adwatchd service.`),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.service.Stop()
+			return a.service.Stop(context.Background())
 		},
 	}
 }
@@ -55,7 +56,7 @@ func (a *App) serviceRestart() *cobra.Command {
 		Short: i18n.G("Restarts the adwatchd service"),
 		Long:  i18n.G(`Restarts the adwatchd service.`),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.service.Restart()
+			return a.service.Restart(context.Background())
 		},
 	}
 }
@@ -66,7 +67,7 @@ func (a *App) serviceStatus() *cobra.Command {
 		Short: i18n.G("Returns the status of the adwatchd service"),
 		Long:  i18n.G(`Returns the status of the adwatchd service.`),
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println(a.service.Status())
+			fmt.Println(a.service.Status(context.Background()))
 		},
 	}
 }
@@ -80,7 +81,7 @@ func (a *App) serviceInstall() *cobra.Command {
 The service will be installed as a Windows service.
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.service.Install()
+			return a.service.Install(context.Background())
 		},
 	}
 	cmd.Flags().String("start-type", "automatic", i18n.G("the start type of the service (automatic, delayed, manual, disabled)"))
@@ -95,7 +96,7 @@ func (a *App) serviceUninstall() *cobra.Command {
 		Short: i18n.G("Uninstalls the adwatchd service"),
 		Long:  i18n.G(`Uninstalls the adwatchd service.`),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.service.Uninstall()
+			return a.service.Uninstall(context.Background())
 		},
 	}
 }
