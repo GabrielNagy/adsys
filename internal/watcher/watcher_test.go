@@ -12,9 +12,9 @@ import (
 	"github.com/kardianos/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/ubuntu/adsys/cmd/adwatchd/internal/watcher"
 	"github.com/ubuntu/adsys/internal/config"
 	"github.com/ubuntu/adsys/internal/testutils"
+	"github.com/ubuntu/adsys/internal/watcher"
 	"gopkg.in/ini.v1"
 )
 
@@ -33,35 +33,60 @@ func TestWatchDirectory(t *testing.T) {
 
 		wantVersions []int
 	}{
-		// no gpt.ini
+		// without GPT.ini
 		"New file, no gpt.ini":  {filesToUpdate: []string{"no_gpt/new"}, existingDirs: []string{"no_gpt"}, wantVersions: []int{1}},
 		"No update, no gpt.ini": {existingDirs: []string{"no_gpt"}, wantVersions: []int{0}},
 
-		// with gpt.ini
+		// with GPT.ini
 		"Update with existing gpt.ini": {filesToUpdate: []string{"one_file/new"}, existingDirs: []string{"one_file"}, wantVersions: []int{4}},
 		"No update, existing gpt.ini":  {existingDirs: []string{"one_file"}, wantVersions: []int{3}},
 		"Update existing file":         {filesToUpdate: []string{"one_file/alreadyexists"}, existingDirs: []string{"one_file"}, wantVersions: []int{4}},
 		"Updating gpt.ini is a no-op":  {filesToUpdate: []string{"one_file/gpt.ini"}, existingDirs: []string{"one_file"}, wantVersions: []int{3}},
 
-		// Remove/Rename
-		"Remove root directory":  {filesToRemove: []string{"one_file"}, existingDirs: []string{"one_file"}},
-		"Remove file":            {filesToRemove: []string{"one_file/alreadyexists"}, existingDirs: []string{"one_file"}, wantVersions: []int{4}},
-		"Rename file":            {filesToRename: []string{"one_file/alreadyexists"}, existingDirs: []string{"one_file"}, wantVersions: []int{4}},
-		"Rename file and update": {filesToRename: []string{"one_file/alreadyexists"}, filesToUpdate: []string{"one_file/alreadyexists.bak"}, existingDirs: []string{"one_file"}, wantVersions: []int{4}},
+		// remove / rename
+		"Remove root directory": {filesToRemove: []string{"one_file"}, existingDirs: []string{"one_file"}},
+		"Remove file":           {filesToRemove: []string{"one_file/alreadyexists"}, existingDirs: []string{"one_file"}, wantVersions: []int{4}},
+		"Rename file":           {filesToRename: []string{"one_file/alreadyexists"}, existingDirs: []string{"one_file"}, wantVersions: []int{4}},
+		"Rename file and update": {
+			filesToRename: []string{"one_file/alreadyexists"}, filesToUpdate: []string{"one_file/alreadyexists.bak"},
+			existingDirs: []string{"one_file"}, wantVersions: []int{4}},
 
 		// subdirectories
-		"New file, subdir":               {filesToUpdate: []string{"withsubdir/alreadyexistsDir/new"}, existingDirs: []string{"withsubdir"}, wantVersions: []int{3}},
-		"Existing file, subdir":          {filesToUpdate: []string{"withsubdir/alreadyexistsDir/alreadyexists"}, existingDirs: []string{"withsubdir"}, wantVersions: []int{3}},
-		"New subdir":                     {filesToUpdate: []string{"withsubdir/dir/file"}, existingDirs: []string{"withsubdir"}, wantVersions: []int{3}},
-		"Nested new subdirs":             {filesToUpdate: []string{"withsubdir/otherdir/subdir/file"}, existingDirs: []string{"withsubdir"}, wantVersions: []int{3}},
-		"Multiple nested subdirectories": {filesToUpdate: []string{"withsubdir/new", "withsubdir/alreadyexistsDir/alreadyexists"}, existingDirs: []string{"withsubdir", "withsubdir/alreadyexistsDir"}, wantVersions: []int{3, 3}},
-		"Multiple nested subdirectories, only update nested file": {filesToUpdate: []string{"withsubdir/alreadyexistsDir/alreadyexists"}, existingDirs: []string{"withsubdir/alreadyexistsDir", "withsubdir"}, wantVersions: []int{3, 2}},
-		"New subdir without file":                                 {filesToUpdate: []string{"withsubdir/newsubdir/"}, existingDirs: []string{"withsubdir"}, wantVersions: []int{3}},
-
-		"Combined case": {
-			filesToUpdate: []string{"withsubdir/alreadyexists", "withsubdir/new", "withsubdir/dir/file", "withsubdir/alreadyexistsDir/alreadyexists", "withsubdir/alreadyexistsDir/new", "withsubdir/otherdir/subdir/file", "withsubdir/newdir/"},
+		"New file, subdir": {
+			filesToUpdate: []string{"withsubdir/alreadyexistsDir/new"},
 			existingDirs:  []string{"withsubdir"},
 			wantVersions:  []int{3}},
+		"Existing file, subdir": {
+			filesToUpdate: []string{"withsubdir/alreadyexistsDir/alreadyexists"},
+			existingDirs:  []string{"withsubdir"},
+			wantVersions:  []int{3}},
+		"New subdir": {
+			filesToUpdate: []string{"withsubdir/dir/file"},
+			existingDirs:  []string{"withsubdir"},
+			wantVersions:  []int{3}},
+		"Nested new subdirs": {
+			filesToUpdate: []string{"withsubdir/otherdir/subdir/file"},
+			existingDirs:  []string{"withsubdir"},
+			wantVersions:  []int{3}},
+		"Multiple nested subdirectories": {
+			filesToUpdate: []string{"withsubdir/new", "withsubdir/alreadyexistsDir/alreadyexists"},
+			existingDirs:  []string{"withsubdir", "withsubdir/alreadyexistsDir"},
+			wantVersions:  []int{3, 3}},
+		"Multiple nested subdirectories, only update nested file": {
+			filesToUpdate: []string{"withsubdir/alreadyexistsDir/alreadyexists"},
+			existingDirs:  []string{"withsubdir/alreadyexistsDir", "withsubdir"},
+			wantVersions:  []int{3, 2}},
+		"New subdir without file": {
+			filesToUpdate: []string{"withsubdir/newsubdir/"},
+			existingDirs:  []string{"withsubdir"},
+			wantVersions:  []int{3}},
+		"Combined case": {
+			filesToUpdate: []string{
+				"withsubdir/alreadyexists", "withsubdir/new", "withsubdir/dir/file",
+				"withsubdir/alreadyexistsDir/alreadyexists", "withsubdir/alreadyexistsDir/new",
+				"withsubdir/otherdir/subdir/file", "withsubdir/newdir/"},
+			existingDirs: []string{"withsubdir"},
+			wantVersions: []int{3}},
 
 		// multiple directories
 		"Multiple directories, only one is updated": {
@@ -338,6 +363,16 @@ func TestStopWithoutStart(t *testing.T) {
 
 	err = w.Stop(s)
 	require.Error(t, err, "Stop should have failed but hasn't")
+}
+
+func TestDirs(t *testing.T) {
+	t.Parallel()
+
+	temp := t.TempDir()
+	w, err := watcher.New(context.Background(), []string{temp})
+	require.NoError(t, err, "Can't create watcher")
+
+	assert.Equal(t, []string{temp}, w.Dirs())
 }
 
 func waitForWrites(t *testing.T) {

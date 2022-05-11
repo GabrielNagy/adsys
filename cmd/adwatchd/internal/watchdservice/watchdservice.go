@@ -23,7 +23,9 @@ type WatchdService struct {
 
 type options struct {
 	dirs        []string
+	name        string
 	userService bool
+	interactive bool
 }
 type option func(*options) error
 
@@ -37,8 +39,12 @@ func WithDirs(dirs []string) func(o *options) error {
 
 // New returns a new WatchdService instance.
 func New(ctx context.Context, opts ...option) (*WatchdService, error) {
-	args := options{}
-	// applied options
+	// Set default options.
+	args := options{
+		name: "adwatchd",
+	}
+
+	// Apply given options.
 	for _, o := range opts {
 		if err := o(&args); err != nil {
 			return nil, err
@@ -53,18 +59,23 @@ func New(ctx context.Context, opts ...option) (*WatchdService, error) {
 		}
 	}
 
+	// Create service options.
+	svcOptions := make(service.KeyValue)
+	svcOptions["UserService"] = args.userService
+
 	config := service.Config{
-		Name:        "adwatchd",
+		Name:        args.name,
 		DisplayName: "Active Directory Watch Daemon",
 		Description: "Monitors configured directories for changes and increases the associated GPT.ini version.",
 		Arguments:   []string{"run"},
+		Option:      svcOptions,
 	}
 	s, err := service.New(w, &config)
 	if err != nil {
 		return nil, err
 	}
 
-	if !service.Interactive() {
+	if !args.interactive || !service.Interactive() {
 		logger, err := s.Logger(nil)
 		if err != nil {
 			return nil, err
