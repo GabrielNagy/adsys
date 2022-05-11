@@ -24,7 +24,6 @@ const (
 
 // Watcher provides options necessary to watch a directory and its children.
 type Watcher struct {
-	// TODO: do we need to store dirs here?
 	dirs      []string
 	parentCtx context.Context
 	cancel    context.CancelFunc
@@ -111,13 +110,13 @@ func (w *Watcher) stopWatch(ctx context.Context) error {
 }
 
 // UpdateDirs restarts watch loop with new directories.
-func (w *Watcher) UpdateDirs(dirs []string) error {
+func (w *Watcher) UpdateDirs(dirs []string) (err error) {
+	decorate.OnError(&err, i18n.G("can't update directories to watch"))
 	log.Debugf(w.parentCtx, "Updating directories to %v", dirs)
 
 	for _, dir := range dirs {
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
-			log.Warningf(w.parentCtx, "Directory %v does not exist, continuing to watch current directories", dir)
-			return nil
+			return fmt.Errorf(i18n.G("directory %v does not exist"), dir)
 		}
 	}
 
