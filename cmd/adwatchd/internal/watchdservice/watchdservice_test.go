@@ -8,7 +8,7 @@ import (
 	"github.com/ubuntu/adsys/cmd/adwatchd/internal/watchdservice"
 )
 
-func TestServiceLifecycle(t *testing.T) {
+func TestServiceInstallUninstall(t *testing.T) {
 	t.Parallel()
 
 	temp := t.TempDir()

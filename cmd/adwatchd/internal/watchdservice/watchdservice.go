@@ -19,10 +19,14 @@ import (
 type WatchdService struct {
 	service service.Service
 	watcher *watcher.Watcher
+
+	options options
 }
 
+// options are the configurable functional options for the service.
 type options struct {
 	dirs        []string
+	extraArgs   []string
 	name        string
 	userService bool
 	interactive bool
@@ -35,6 +39,27 @@ func WithDirs(dirs []string) func(o *options) error {
 		o.dirs = dirs
 		return nil
 	}
+}
+
+// WithArgs allows adding additional arguments to the service.
+func WithArgs(args []string) func(o *options) error {
+	return func(o *options) error {
+		o.extraArgs = args
+		return nil
+	}
+}
+
+// WithName allows setting a custom name to the service.
+func WithName(name string) func(o *options) error {
+	return func(o *options) error {
+		o.name = name
+		return nil
+	}
+}
+
+// Name returns the name of the service.
+func (s *WatchdService) Name() string {
+	return s.options.name
 }
 
 // New returns a new WatchdService instance.
@@ -62,12 +87,13 @@ func New(ctx context.Context, opts ...option) (*WatchdService, error) {
 	// Create service options.
 	svcOptions := make(service.KeyValue)
 	svcOptions["UserService"] = args.userService
+	svcArguments := append([]string{"run"}, args.extraArgs...)
 
 	config := service.Config{
 		Name:        args.name,
 		DisplayName: "Active Directory Watch Daemon",
 		Description: "Monitors configured directories for changes and increases the associated GPT.ini version.",
-		Arguments:   []string{"run"},
+		Arguments:   svcArguments,
 		Option:      svcOptions,
 	}
 	s, err := service.New(w, &config)
@@ -75,7 +101,9 @@ func New(ctx context.Context, opts ...option) (*WatchdService, error) {
 		return nil, err
 	}
 
-	if !args.interactive || !service.Interactive() {
+	// If we're not running in interactive mode (CLI), add a hook to the logger
+	// so that the service can log to the Windows Event Log.
+	if !service.Interactive() {
 		logger, err := s.Logger(nil)
 		if err != nil {
 			return nil, err
@@ -86,6 +114,7 @@ func New(ctx context.Context, opts ...option) (*WatchdService, error) {
 	return &WatchdService{
 		service: s,
 		watcher: w,
+		options: args,
 	}, nil
 }
 
@@ -94,7 +123,13 @@ func (s *WatchdService) UpdateDirs(ctx context.Context, dirs []string) (err erro
 	decorate.OnError(&err, i18n.G("failed to change directories to watch"))
 	log.Info(ctx, "Updating directories to watch")
 
-	return s.watcher.UpdateDirs(dirs)
+	if err := s.watcher.UpdateDirs(dirs); err != nil {
+		return err
+	}
+
+	// Make sure we update the options struct as well.
+	s.options.dirs = dirs
+	return nil
 }
 
 // Start starts the watcher service.
@@ -149,8 +184,16 @@ func (s *WatchdService) Restart(ctx context.Context) (err error) {
 	decorate.OnError(&err, i18n.G("failed to restart service"))
 	log.Info(ctx, "Restarting service")
 
-	if err := s.service.Stop(); err != nil {
+	stat, err := s.service.Status()
+	if err != nil {
 		return err
+	}
+
+	// Only stop if the service is running.
+	if stat == service.StatusRunning {
+		if err := s.service.Stop(); err != nil {
+			return err
+		}
 	}
 
 	if err := s.service.Start(); err != nil {
@@ -160,7 +203,7 @@ func (s *WatchdService) Restart(ctx context.Context) (err error) {
 	return nil
 }
 
-// Status provides a status of the watcher service.
+// Status provides a status of the watcher service in a pretty format.
 func (s *WatchdService) Status(ctx context.Context) (status string, err error) {
 	decorate.OnError(&err, i18n.G("failed to retrieve status for service"))
 	log.Debug(ctx, "Getting status from service")
@@ -199,24 +242,55 @@ Watching directories:
 	return status, nil
 }
 
-// Install installs the watcher service.
+// Install installs the watcher service and starts it if it doesn't
+// automatically start in due time.
 func (s *WatchdService) Install(ctx context.Context) (err error) {
 	decorate.OnError(&err, i18n.G("failed to install service"))
 	log.Info(ctx, "Installing watcher service")
-	return s.service.Install()
+	if err := s.service.Install(); err != nil {
+		return err
+	}
+
+	if err := s.waitForStatus(ctx, service.StatusRunning); err != nil {
+		// Try to start it (not all platforms try to start it after installing)
+		return s.service.Start()
+	}
+
+	return nil
 }
 
-// Uninstall uninstalls the watcher service.
+// Uninstall uninstalls the watcher service. If the service is not installed it
+// logs a message and returns. If the service is running it attempts to stop it
+// first.
 func (s *WatchdService) Uninstall(ctx context.Context) (err error) {
 	decorate.OnError(&err, i18n.G("failed to uninstall service"))
 	log.Info(ctx, "Uninstalling watcher service")
+
+	stat, err := s.service.Status()
+	if errors.Is(err, service.ErrNotInstalled) {
+		log.Info(ctx, "Service is not installed")
+		return nil
+	}
+
+	// Stop the service first if running
+	if stat == service.StatusRunning {
+		if err := s.service.Stop(); err != nil {
+			return err
+		}
+	}
+
 	return s.service.Uninstall()
 }
 
-// Run runs the watcher service.
+// Run runs the watcher service, which blocks.
 func (s *WatchdService) Run(ctx context.Context) (err error) {
 	decorate.OnError(&err, i18n.G("failed to run service"))
 	log.Info(ctx, "Running watcher service")
 
 	return s.service.Run()
+}
+
+// StopWatch stops the watcher service.
+func (s *WatchdService) StopWatch(ctx context.Context) (err error) {
+	return s.watcher.StopWatch(ctx)
 }

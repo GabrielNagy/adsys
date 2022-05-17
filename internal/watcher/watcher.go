@@ -32,6 +32,7 @@ type Watcher struct {
 	refreshDuration time.Duration
 }
 
+// options are the configurable functional options for the watcher.
 type options struct {
 	refreshDuration time.Duration
 }
@@ -43,10 +44,11 @@ func New(ctx context.Context, dirs []string, opts ...option) (*Watcher, error) {
 		return nil, errors.New(i18n.G("no directories to watch"))
 	}
 
+	// Set default options
 	args := options{
 		refreshDuration: 10 * time.Second,
 	}
-	// applied options
+	// Override default options with user-provided ones
 	for _, o := range opts {
 		if err := o(&args); err != nil {
 			return nil, err
@@ -73,6 +75,14 @@ func (w *Watcher) Start(s service.Service) (err error) {
 	return w.startWatch(w.parentCtx, w.dirs)
 }
 
+// Stop is called by the service manager to stop the watcher service.
+func (w *Watcher) Stop(s service.Service) (err error) {
+	decorate.OnError(&err, i18n.G("can't stop service"))
+
+	return w.StopWatch(w.parentCtx)
+}
+
+// startWatch starts the actual watch loop.
 func (w *Watcher) startWatch(ctx context.Context, dirs []string) error {
 	ctx, cancel := context.WithCancel(w.parentCtx)
 	w.cancel = cancel
@@ -87,14 +97,8 @@ func (w *Watcher) startWatch(ctx context.Context, dirs []string) error {
 	return <-initError
 }
 
-// Stop is called by the service manager to stop the watcher service.
-func (w *Watcher) Stop(s service.Service) (err error) {
-	decorate.OnError(&err, i18n.G("can't stop service"))
-
-	return w.stopWatch(w.parentCtx)
-}
-
-func (w *Watcher) stopWatch(ctx context.Context) error {
+// StopWatch stops the watch loop.
+func (w *Watcher) StopWatch(ctx context.Context) error {
 	if w.cancel == nil {
 		return errors.New(i18n.G("the service is already stopping or not running"))
 	}
@@ -114,7 +118,8 @@ func (w *Watcher) stopWatch(ctx context.Context) error {
 	return nil
 }
 
-// UpdateDirs restarts watch loop with new directories.
+// UpdateDirs restarts watch loop with new directories. No action is taken if
+// one or more directories do not exist.
 func (w *Watcher) UpdateDirs(dirs []string) (err error) {
 	decorate.OnError(&err, i18n.G("can't update directories to watch"))
 	for _, dir := range dirs {
@@ -125,7 +130,7 @@ func (w *Watcher) UpdateDirs(dirs []string) (err error) {
 
 	log.Debugf(w.parentCtx, "Updating directories to %v", dirs)
 
-	if err := w.stopWatch(w.parentCtx); err != nil {
+	if err := w.StopWatch(w.parentCtx); err != nil {
 		return err
 	}
 
@@ -133,6 +138,7 @@ func (w *Watcher) UpdateDirs(dirs []string) (err error) {
 	return w.startWatch(w.parentCtx, dirs)
 }
 
+// watch is the main watch loop.
 func (w *Watcher) watch(ctx context.Context, dirs []string, initError chan<- error) (err error) {
 	decorate.OnError(&err, i18n.G("can't watch over %v"), dirs)
 	defer close(w.watching)
@@ -150,7 +156,7 @@ func (w *Watcher) watch(ctx context.Context, dirs []string, initError chan<- err
 		}
 	}
 
-	// We have a grace period of 10s without any changes before committing the changes.
+	// We configure a timer for a grace period without changes before committing any changes.
 	refreshTimer := time.NewTimer(w.refreshDuration)
 	defer refreshTimer.Stop()
 	refreshTimer.Stop()
@@ -166,12 +172,11 @@ func (w *Watcher) watch(ctx context.Context, dirs []string, initError chan<- err
 			}
 			log.Debugf(ctx, "Got event: %v", event)
 
-			// If the modified file is our changes, ignore.
+			// If the modified file is our own change, ignore it.
 			if strings.ToLower(filepath.Base(event.Name)) == gptFileName {
 				continue
 			}
 
-			// Add new detected files and directories for content to watch.
 			if event.Op&fsnotify.Create == fsnotify.Create {
 				fileInfo, err := os.Stat(event.Name)
 				if err != nil {
@@ -179,6 +184,7 @@ func (w *Watcher) watch(ctx context.Context, dirs []string, initError chan<- err
 					continue
 				}
 
+				// Add new detected files and directories to the watch list.
 				if fileInfo.IsDir() {
 					if err := watchSubDirs(ctx, fsWatcher, event.Name); err != nil {
 						return err
@@ -218,14 +224,16 @@ func (w *Watcher) watch(ctx context.Context, dirs []string, initError chan<- err
 				modifiedRootDirs = append(modifiedRootDirs, rootDir)
 			}
 
-			// Set the grace period of 10s without any changes before bumping the version.
-			// Stop means that the timer expired, not that it was stopped, so drain the channel only if there is something to drain.
+			// Stop means that the timer expired, not that it was stopped, so
+			// drain the channel only if there is something to drain.
 			if !refreshTimer.Stop() {
 				select {
 				case <-refreshTimer.C:
 				default:
 				}
 			}
+
+			// We got a change, so reset the timer to the grace period.
 			refreshTimer.Reset(w.refreshDuration)
 
 		case err, ok := <-fsWatcher.Errors:
@@ -235,7 +243,7 @@ func (w *Watcher) watch(ctx context.Context, dirs []string, initError chan<- err
 			continue
 
 		case <-refreshTimer.C:
-			// Updating GPT.ini.
+			// Update relevant GPT.ini files.
 			updateVersions(ctx, modifiedRootDirs)
 
 		case <-ctx.Done():
@@ -269,6 +277,8 @@ func getRootDir(path string, rootDirs []string) (string, error) {
 	var currentRootDirLength int
 	for _, root := range rootDirs {
 		if strings.HasPrefix(path, root) {
+			// Make sure we take into account the possibility of nested
+			// configured directories.
 			if len(root) <= currentRootDirLength {
 				continue
 			}
@@ -297,6 +307,8 @@ func bumpVersion(ctx context.Context, path string) (err error) {
 	log.Infof(ctx, "Bumping version for %s", path)
 
 	cfg, err := ini.Load(path)
+
+	// If the file doesn't exist, create it and initialize the key to be updated.
 	if err != nil {
 		log.Warningf(ctx, "error loading ini contents: %v, creating a new file", err)
 		cfg = ini.Empty()
@@ -304,10 +316,13 @@ func bumpVersion(ctx context.Context, path string) (err error) {
 	}
 
 	v, err := cfg.Section("General").Key("Version").Int()
+
+	// Error out if the key is absent or malformed.
 	if err != nil {
 		return err
 	}
 
+	// Increment the version and write it back to the file.
 	v++
 	cfg.Section("General").Key("Version").SetValue(strconv.Itoa(v))
 
