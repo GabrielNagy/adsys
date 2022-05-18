@@ -72,18 +72,18 @@ func (w *Watcher) Dirs() []string {
 func (w *Watcher) Start(s service.Service) (err error) {
 	decorate.OnError(&err, i18n.G("can't start service"))
 
-	return w.StartWatch(w.parentCtx, w.dirs)
+	return w.startWatch(w.parentCtx, w.dirs)
 }
 
 // Stop is called by the service manager to stop the watcher service.
 func (w *Watcher) Stop(s service.Service) (err error) {
 	decorate.OnError(&err, i18n.G("can't stop service"))
 
-	return w.StopWatch(w.parentCtx)
+	return w.stopWatch(w.parentCtx)
 }
 
-// StartWatch starts the actual watch loop.
-func (w *Watcher) StartWatch(ctx context.Context, dirs []string) error {
+// startWatch starts the actual watch loop.
+func (w *Watcher) startWatch(ctx context.Context, dirs []string) error {
 	ctx, cancel := context.WithCancel(w.parentCtx)
 	w.cancel = cancel
 
@@ -97,8 +97,8 @@ func (w *Watcher) StartWatch(ctx context.Context, dirs []string) error {
 	return <-initError
 }
 
-// StopWatch stops the watch loop.
-func (w *Watcher) StopWatch(ctx context.Context) error {
+// stopWatch stops the watch loop.
+func (w *Watcher) stopWatch(ctx context.Context) error {
 	if w.cancel == nil {
 		return errors.New(i18n.G("the service is already stopping or not running"))
 	}
@@ -130,12 +130,12 @@ func (w *Watcher) UpdateDirs(dirs []string) (err error) {
 
 	log.Debugf(w.parentCtx, "Updating directories to %v", dirs)
 
-	if err := w.StopWatch(w.parentCtx); err != nil {
+	if err := w.stopWatch(w.parentCtx); err != nil {
 		return err
 	}
 
 	w.dirs = dirs
-	return w.StartWatch(w.parentCtx, dirs)
+	return w.startWatch(w.parentCtx, dirs)
 }
 
 // watch is the main watch loop.
@@ -187,7 +187,7 @@ func (w *Watcher) watch(ctx context.Context, dirs []string, initError chan<- err
 				// Add new detected files and directories to the watch list.
 				if fileInfo.IsDir() {
 					if err := watchSubDirs(ctx, fsWatcher, event.Name); err != nil {
-						return err
+						log.Warningf(ctx, "Failed to watch: %s", err)
 					}
 				} else if fileInfo.Mode().IsRegular() {
 					fsWatcher.Add(event.Name)

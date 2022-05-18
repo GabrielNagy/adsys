@@ -58,7 +58,7 @@ func TestServiceStateChange(t *testing.T) {
 			var err error
 
 			watchDir := t.TempDir()
-			configPath := generateConfig(t, watchDir)
+			configPath := generateConfig(t, -1, watchDir)
 
 			// Give each test a different service name so we can parallelize
 			svcName := strings.ReplaceAll(name, " ", "_")
@@ -101,10 +101,10 @@ func TestInstall(t *testing.T) {
 	watchedDir := t.TempDir()
 
 	app := commands.New()
-	installService(t, generateConfig(t, watchedDir), app)
+	installService(t, generateConfig(t, -1, watchedDir), app)
 
 	t.Cleanup(func() {
-		uninstallService(t, generateConfig(t, watchedDir), app)
+		uninstallService(t, generateConfig(t, -1, watchedDir), app)
 	})
 
 	out := getStatus(t, app)
@@ -115,7 +115,7 @@ func TestUpdateGPT(t *testing.T) {
 	t.Parallel()
 
 	watchedDir := t.TempDir()
-	configPath := generateConfig(t, watchedDir)
+	configPath := generateConfig(t, -1, watchedDir)
 
 	app := commands.New(commands.WithServiceName("adwatchd-test-update-gpt"))
 	t.Cleanup(func() {

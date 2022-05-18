@@ -34,17 +34,22 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func generateConfig(t *testing.T, dirs ...string) string {
+func generateConfig(t *testing.T, verbosity int, dirs ...string) string {
 	t.Helper()
 
 	var dirContent string
+	var verboseContent string
 	for _, dir := range dirs {
 		dirContent += fmt.Sprintf("  - %s\n", dir)
 	}
 
+	if verbosity > -1 {
+		verboseContent = fmt.Sprintf("verbose: %d\n", verbosity)
+	}
+
 	dest := filepath.Join(t.TempDir(), "adwatchd.yaml")
-	err := os.WriteFile(dest, []byte(fmt.Sprintf(`dirs:
-%s`, dirContent)), 0600)
+	err := os.WriteFile(dest, []byte(fmt.Sprintf(`%sdirs:
+%s`, verboseContent, dirContent)), 0600)
 	require.NoError(t, err, "Setup: can't write configuration file")
 
 	return dest

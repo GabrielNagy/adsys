@@ -282,19 +282,10 @@ func (s *WatchdService) Uninstall(ctx context.Context) (err error) {
 	return s.service.Uninstall()
 }
 
-// Run runs the watcher service, which blocks.
+// Run runs the watcher service.
 func (s *WatchdService) Run(ctx context.Context) (err error) {
 	decorate.OnError(&err, i18n.G("failed to run service"))
 
-	if service.Interactive() {
-		log.Info(ctx, "Running watcher service in interactive mode")
-		return s.watcher.StartWatch(ctx, s.watcher.Dirs())
-	}
 	log.Info(ctx, "Running watcher service")
 	return s.service.Run()
-}
-
-// StopWatch stops the watcher service.
-func (s *WatchdService) StopWatch(ctx context.Context) (err error) {
-	return s.watcher.StopWatch(ctx)
 }

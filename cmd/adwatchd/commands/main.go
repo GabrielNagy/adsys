@@ -2,7 +2,9 @@ package commands
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
+	"syscall"
 
 	"github.com/kardianos/service"
 	"github.com/spf13/cobra"
@@ -87,6 +89,7 @@ func New(opts ...option) *App {
 				oldVerbose := a.config.Verbose
 				oldDirs := a.config.Dirs
 				a.config = newConfig
+				// TODO: check why Verbose does not update properly
 				if oldVerbose != a.config.Verbose {
 					config.SetVerboseMode(a.config.Verbose)
 				}
@@ -94,6 +97,7 @@ func New(opts ...option) *App {
 					if a.service != nil {
 						if err := a.service.UpdateDirs(context.Background(), a.config.Dirs); err != nil {
 							log.Warningf(context.Background(), "failed to update directories: %v", err)
+							a.config.Dirs = oldDirs
 						}
 					}
 				}
@@ -176,6 +180,16 @@ func (a *App) SetArgs(args []string) {
 	a.rootCmd.SetArgs(args)
 }
 
+// Dirs returns the configured directories. Shouldn't be in general necessary apart for integration tests.
+func (a App) Dirs() []string {
+	return a.config.Dirs
+}
+
+// Verbosity returns the configured verbosity. Shouldn't be in general necessary apart for integration tests.
+func (a App) Verbosity() int {
+	return a.config.Verbose
+}
+
 // Reset recreates the ready channel. Shouldn't be in general necessary apart
 // for integration tests, where multiple commands are executed on the same
 // instance.
@@ -183,14 +197,17 @@ func (a *App) Reset() {
 	a.ready = make(chan struct{})
 }
 
-// Quit gracefully exits the app.
-func (a *App) Quit() error {
+// Quit gracefully exits the app. Shouldn't be in general necessary apart for
+// integration tests where we might need to close the app manually.
+func (a *App) Quit(sig syscall.Signal) error {
 	a.waitReady()
-
-	if service.Interactive() {
-		return a.service.StopWatch(context.Background())
+	if !service.Interactive() {
+		return fmt.Errorf("not running in interactive mode")
 	}
-	return a.service.Stop(context.Background())
+
+	// The service package is responsible for handling the service stop. It registers a signal handler
+	// and to trigger it we just have to send a SIGTERM ourselves and not bother with actual cleanup.
+	return syscall.Kill(syscall.Getpid(), sig)
 }
 
 // waitReady signals when the daemon is ready
