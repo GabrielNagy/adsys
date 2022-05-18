@@ -12,10 +12,10 @@ import (
 	log "github.com/ubuntu/adsys/internal/grpc/logstreamer"
 	"golang.org/x/exp/slices"
 
-	"github.com/ubuntu/adsys/cmd/adwatchd/internal/watchdservice"
 	"github.com/ubuntu/adsys/internal/cmdhandler"
 	"github.com/ubuntu/adsys/internal/config"
 	"github.com/ubuntu/adsys/internal/i18n"
+	"github.com/ubuntu/adsys/internal/watchdservice"
 )
 
 // App encapsulates commands and options of the daemon, which can be controlled by env variables and config files.
