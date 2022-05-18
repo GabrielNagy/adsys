@@ -11,7 +11,7 @@ import (
 	"github.com/ubuntu/adsys/internal/i18n"
 )
 
-func run(a commands.App) int {
+func run(a *commands.App) int {
 	i18n.InitI18nDomain(consts.TEXTDOMAIN)
 	//TODO: defer installSignalHandler(a)()
 

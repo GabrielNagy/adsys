@@ -2,9 +2,9 @@ package commands
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 
+	"github.com/kardianos/service"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	log "github.com/ubuntu/adsys/internal/grpc/logstreamer"
@@ -24,10 +24,13 @@ type App struct {
 	config  appConfig
 	service *watchdservice.WatchdService
 	options options
+
+	ready chan struct{}
 }
 
 type appConfig struct {
 	Verbose int
+	Force   bool
 	Dirs    []string
 }
 
@@ -45,7 +48,7 @@ func WithServiceName(name string) func(o *options) error {
 }
 
 // New registers commands and return a new App.
-func New(opts ...option) App {
+func New(opts ...option) *App {
 	// Set default options.
 	args := options{
 		name: "adwatchd",
@@ -56,7 +59,7 @@ func New(opts ...option) App {
 		o(&args)
 	}
 
-	a := App{}
+	a := App{ready: make(chan struct{})}
 	a.options = args
 	a.rootCmd = cobra.Command{
 		Use:   "adwatchd [COMMAND]",
@@ -101,6 +104,7 @@ func New(opts ...option) App {
 			// Set configured verbose status for the daemon before getting error output.
 			config.SetVerboseMode(a.config.Verbose)
 			if err != nil {
+				close(a.ready)
 				return err
 			}
 
@@ -109,6 +113,7 @@ func New(opts ...option) App {
 			if len(a.viper.ConfigFileUsed()) > 0 {
 				absPath, err := filepath.Abs(a.viper.ConfigFileUsed())
 				if err != nil {
+					close(a.ready)
 					return err
 				}
 				configFile = []string{"-c", absPath}
@@ -122,9 +127,11 @@ func New(opts ...option) App {
 				watchdservice.WithArgs(configFile))
 
 			if err != nil {
+				close(a.ready)
 				return err
 			}
 			a.service = service
+			close(a.ready)
 
 			return nil
 		},
@@ -151,7 +158,7 @@ func New(opts ...option) App {
 	a.installRun()
 	a.installService()
 
-	return a
+	return &a
 }
 
 // Run executes the app.
@@ -169,11 +176,25 @@ func (a *App) SetArgs(args []string) {
 	a.rootCmd.SetArgs(args)
 }
 
+// Reset recreates the ready channel. Shouldn't be in general necessary apart
+// for integration tests, where multiple commands are executed on the same
+// instance.
+func (a *App) Reset() {
+	a.ready = make(chan struct{})
+}
+
 // Quit gracefully exits the app.
 func (a *App) Quit() error {
-	if a.service == nil {
-		return fmt.Errorf("service not initialized")
-	}
+	a.waitReady()
 
-	return a.service.StopWatch(context.Background())
+	if service.Interactive() {
+		return a.service.StopWatch(context.Background())
+	}
+	return a.service.Stop(context.Background())
+}
+
+// waitReady signals when the daemon is ready
+// Note: we need to use a pointer to not copy the App object before the daemon is ready, and thus, creates a data race.
+func (a *App) waitReady() {
+	<-a.ready
 }

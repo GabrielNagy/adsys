@@ -3,11 +3,10 @@ package commands
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
+	log "github.com/ubuntu/adsys/internal/grpc/logstreamer"
 	"github.com/ubuntu/adsys/internal/i18n"
 )
 
@@ -27,16 +26,14 @@ If a GPT.ini file does not exist for a directory, a warning will be issued and t
 				return fmt.Errorf(i18n.G("run command needs at least one directory to watch either with --dirs or via the configuration file"))
 			}
 
-			err := fmt.Errorf(i18n.G("another instance of adwatchd is already running"))
-
-			// Exit early if we have more than one executable with the same name running.
-			if count, _ := pidCount(filepath.Base(os.Args[0])); count > 1 {
-				return err
-			}
+			msg := i18n.G("another instance of adwatchd is already running")
 
 			// Exit early if we have a service with the same name running.
 			if status, _ := a.service.Status(context.Background()); strings.Contains(status, "running") {
-				return err
+				if !a.config.Force {
+					return fmt.Errorf(msg)
+				}
+				log.Warningf(context.Background(), msg)
 			}
 
 			return a.service.Run(context.Background())
@@ -51,7 +48,15 @@ If a GPT.ini file does not exist for a directory, a warning will be issued and t
 		[]string{`C:\Windows\sysvol`},
 		i18n.G("a `directory` to check for changes (can be specified multiple times)"),
 	)
+
+	cmd.Flags().BoolP(
+		"force",
+		"f",
+		false,
+		i18n.G("force the program to run even if another instance is already running"),
+	)
 	a.viper.BindPFlag("dirs", cmd.Flags().Lookup("dirs"))
+	a.viper.BindPFlag("force", cmd.Flags().Lookup("force"))
 
 	a.rootCmd.AddCommand(cmd)
 }

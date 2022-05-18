@@ -65,13 +65,13 @@ func TestServiceStateChange(t *testing.T) {
 			app := commands.New(commands.WithServiceName(fmt.Sprintf("adwatchd-test-%s", svcName)))
 
 			t.Cleanup(func() {
-				uninstallService(t, configPath, &app)
+				uninstallService(t, configPath, app)
 			})
 
-			installService(t, configPath, &app)
+			installService(t, configPath, app)
 
 			// Begin with a stopped state
-			changeAppArgs(t, &app, configPath, "service", "stop")
+			changeAppArgs(t, app, configPath, "service", "stop")
 			err = app.Run()
 			require.NoError(t, err, "Setup: Stopping the service failed but shouldn't")
 
@@ -79,7 +79,7 @@ func TestServiceStateChange(t *testing.T) {
 				os.RemoveAll(watchDir)
 			}
 			for index, state := range tc.sequence {
-				changeAppArgs(t, &app, configPath, "service", state)
+				changeAppArgs(t, app, configPath, "service", state)
 				err := app.Run()
 				if slices.Contains(tc.wantErrAt, index) {
 					require.Error(t, err, fmt.Sprintf("%s should have failed but hasn't", state))
@@ -87,7 +87,7 @@ func TestServiceStateChange(t *testing.T) {
 					require.NoError(t, err, fmt.Sprintf("%s failed but shouldn't", state))
 				}
 				if tc.wantStopped {
-					out := getStatus(t, &app)
+					out := getStatus(t, app)
 					require.Contains(t, out, "stopped", "Service should be stopped")
 				}
 			}
@@ -101,13 +101,13 @@ func TestInstall(t *testing.T) {
 	watchedDir := t.TempDir()
 
 	app := commands.New()
-	installService(t, generateConfig(t, watchedDir), &app)
+	installService(t, generateConfig(t, watchedDir), app)
 
 	t.Cleanup(func() {
-		uninstallService(t, generateConfig(t, watchedDir), &app)
+		uninstallService(t, generateConfig(t, watchedDir), app)
 	})
 
-	out := getStatus(t, &app)
+	out := getStatus(t, app)
 	require.Contains(t, out, "running", "Newly installed service should be running")
 }
 
@@ -119,10 +119,10 @@ func TestUpdateGPT(t *testing.T) {
 
 	app := commands.New(commands.WithServiceName("adwatchd-test-update-gpt"))
 	t.Cleanup(func() {
-		uninstallService(t, configPath, &app)
+		uninstallService(t, configPath, app)
 	})
 
-	installService(t, configPath, &app)
+	installService(t, configPath, app)
 
 	// Wait for service to be running
 	time.Sleep(time.Second)
@@ -136,7 +136,7 @@ func TestUpdateGPT(t *testing.T) {
 	time.Sleep(time.Millisecond * 100)
 
 	// Stop the service to trigger the GPT update
-	changeAppArgs(t, &app, configPath, "service", "stop")
+	changeAppArgs(t, app, configPath, "service", "stop")
 	err = app.Run()
 	require.NoError(t, err, "Setup: Stopping the service failed but shouldn't")
 

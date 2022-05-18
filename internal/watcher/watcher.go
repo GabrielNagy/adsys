@@ -72,7 +72,7 @@ func (w *Watcher) Dirs() []string {
 func (w *Watcher) Start(s service.Service) (err error) {
 	decorate.OnError(&err, i18n.G("can't start service"))
 
-	return w.startWatch(w.parentCtx, w.dirs)
+	return w.StartWatch(w.parentCtx, w.dirs)
 }
 
 // Stop is called by the service manager to stop the watcher service.
@@ -82,8 +82,8 @@ func (w *Watcher) Stop(s service.Service) (err error) {
 	return w.StopWatch(w.parentCtx)
 }
 
-// startWatch starts the actual watch loop.
-func (w *Watcher) startWatch(ctx context.Context, dirs []string) error {
+// StartWatch starts the actual watch loop.
+func (w *Watcher) StartWatch(ctx context.Context, dirs []string) error {
 	ctx, cancel := context.WithCancel(w.parentCtx)
 	w.cancel = cancel
 
@@ -135,7 +135,7 @@ func (w *Watcher) UpdateDirs(dirs []string) (err error) {
 	}
 
 	w.dirs = dirs
-	return w.startWatch(w.parentCtx, dirs)
+	return w.StartWatch(w.parentCtx, dirs)
 }
 
 // watch is the main watch loop.
@@ -252,7 +252,6 @@ func (w *Watcher) watch(ctx context.Context, dirs []string, initError chan<- err
 			if refreshTimer.Stop() {
 				updateVersions(ctx, modifiedRootDirs)
 			}
-
 			return nil
 		}
 	}

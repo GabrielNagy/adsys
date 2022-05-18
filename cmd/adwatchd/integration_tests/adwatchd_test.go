@@ -88,6 +88,7 @@ func changeAppArgs(t *testing.T, app *commands.App, conf string, args ...string)
 		newArgs = append(newArgs, args...)
 	}
 
+	app.Reset()
 	app.SetArgs(newArgs)
 }
 
