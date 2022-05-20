@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"syscall"
 
@@ -40,14 +41,6 @@ type options struct {
 	name string
 }
 type option func(*options) error
-
-// WithServiceName allows setting a custom name for the daemon.
-func WithServiceName(name string) func(o *options) error {
-	return func(o *options) error {
-		o.name = name
-		return nil
-	}
-}
 
 // New registers commands and return a new App.
 func New(opts ...option) *App {
@@ -205,9 +198,25 @@ func (a *App) Quit(sig syscall.Signal) error {
 		return fmt.Errorf("not running in interactive mode")
 	}
 
-	// The service package is responsible for handling the service stop. It registers a signal handler
-	// and to trigger it we just have to send a SIGTERM ourselves and not bother with actual cleanup.
-	return syscall.Kill(syscall.Getpid(), sig)
+	// The service package is responsible for handling the service stop. It
+	// registers a signal handler and to trigger it we just have to send the
+	// signal ourselves and not bother with actual cleanup.
+	p, err := os.FindProcess(os.Getpid())
+	if err != nil {
+		return err
+	}
+
+	return p.Signal(sig)
+}
+
+// WithServiceName allows setting a custom name for the daemon. Shouldn't be in
+// general necessary apart for integration tests where it helps with parallel
+// execution.
+func WithServiceName(name string) func(o *options) error {
+	return func(o *options) error {
+		o.name = name
+		return nil
+	}
 }
 
 // waitReady signals when the daemon is ready

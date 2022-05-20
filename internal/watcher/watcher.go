@@ -69,6 +69,9 @@ func (w *Watcher) Dirs() []string {
 }
 
 // Start is called by the service manager to start the watcher service.
+// Documentation states that the function should not block but run
+// asynchronously. When our function exits, the service manager registers a
+// signal handler that calls Stop when a signal is received.
 func (w *Watcher) Start(s service.Service) (err error) {
 	decorate.OnError(&err, i18n.G("can't start service"))
 
@@ -76,13 +79,15 @@ func (w *Watcher) Start(s service.Service) (err error) {
 }
 
 // Stop is called by the service manager to stop the watcher service.
+// Documentation states that the function should not take more than a few
+// seconds to execute.
 func (w *Watcher) Stop(s service.Service) (err error) {
 	decorate.OnError(&err, i18n.G("can't stop service"))
 
 	return w.stopWatch(w.parentCtx)
 }
 
-// startWatch starts the actual watch loop.
+// startWatch starts the actual watch loop in a goroutine.
 func (w *Watcher) startWatch(ctx context.Context, dirs []string) error {
 	ctx, cancel := context.WithCancel(w.parentCtx)
 	w.cancel = cancel
@@ -257,6 +262,7 @@ func (w *Watcher) watch(ctx context.Context, dirs []string, initError chan<- err
 	}
 }
 
+// watchSubDirs walks a given directory and adds all subdirectories to the watch list.
 func watchSubDirs(ctx context.Context, fsWatcher *fsnotify.Watcher, path string) (err error) {
 	decorate.OnError(&err, i18n.G("can't watch directory and children of %s"), path)
 	log.Debugf(ctx, "Watching %s and children", path)
@@ -271,6 +277,8 @@ func watchSubDirs(ctx context.Context, fsWatcher *fsnotify.Watcher, path string)
 	return err
 }
 
+// getRootDir returns the configured directory of the given file path. It
+// handles nested directories by returning the most nested one.
 func getRootDir(path string, rootDirs []string) (string, error) {
 	var rootDir string
 	var currentRootDirLength int
@@ -292,6 +300,7 @@ func getRootDir(path string, rootDirs []string) (string, error) {
 	return rootDir, nil
 }
 
+// updateVersions updates the GPT.ini files of the given directories.
 func updateVersions(ctx context.Context, modifiedRootDirs []string) {
 	for _, dir := range modifiedRootDirs {
 		gptIniPath := filepath.Join(dir, gptFileName)
@@ -301,6 +310,7 @@ func updateVersions(ctx context.Context, modifiedRootDirs []string) {
 	}
 }
 
+// bumpVersion does the actual bumping of the version in the given GPT.ini file.
 func bumpVersion(ctx context.Context, path string) (err error) {
 	decorate.OnError(&err, i18n.G("can't bump version for %s"), path)
 	log.Infof(ctx, "Bumping version for %s", path)
