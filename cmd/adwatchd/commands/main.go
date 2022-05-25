@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/kardianos/service"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/ubuntu/adsys/cmd/adwatchd/interactive"
 	log "github.com/ubuntu/adsys/internal/grpc/logstreamer"
 	"golang.org/x/exp/slices"
 
@@ -134,6 +136,17 @@ func New(opts ...option) *App {
 		},
 
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if status, _ := a.service.Status(context.Background()); !strings.Contains(status, "not installed") {
+				return fmt.Errorf(i18n.G(`Cannot run the interactive installer if the service is already installed.
+If you wish to rerun the installer, please remove the service first.
+
+This can be done via the Services UI or by running: adwatchd service uninstall`))
+			}
+
+			if err := interactive.Start(context.Background(), defaultConfigPath()); err != nil {
+				return err
+			}
+
 			return nil
 		},
 
@@ -147,7 +160,7 @@ func New(opts ...option) *App {
 	a.rootCmd.PersistentFlags().StringP(
 		"config",
 		"c",
-		``, // TODO update with final path
+		defaultConfigPath(),
 		i18n.G("`path` to config file"),
 	)
 
@@ -156,6 +169,10 @@ func New(opts ...option) *App {
 	a.installService()
 
 	return &a
+}
+
+func defaultConfigPath() string {
+	return filepath.Join("adwatchd.yaml")
 }
 
 // Run executes the app.
