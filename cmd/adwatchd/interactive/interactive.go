@@ -20,15 +20,22 @@ import (
 )
 
 var (
-	focusedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#E95420")) // Ubuntu orange
 	successStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#99cc99"))
 	blurredStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	hintStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFCC00"))
 	cursorStyle  = focusedStyle.Copy()
 	noStyle      = lipgloss.NewStyle()
+	boldStyle    = lipgloss.NewStyle().Bold(true)
+	titleStyle   = lipgloss.NewStyle().Underline(true).Bold(true)
+	focusedStyle = boldStyle.Copy().Foreground(lipgloss.Color("#E95420")) // Ubuntu orange
 
 	submitText    = i18n.G("Install")
 	focusedButton = focusedStyle.Copy().Render(fmt.Sprintf("[ %s ]", submitText))
 	blurredButton = fmt.Sprintf("[ %s ]", blurredStyle.Render(submitText))
+
+	// Add a thick border to the top and bottom.
+	border = lipgloss.NewStyle().
+		Border(lipgloss.ThickBorder(), true, false)
 )
 
 type model struct {
@@ -106,9 +113,14 @@ func (m model) installService(confFile string, dirs []string) tea.Cmd {
 			return installMsg{err}
 		}
 
+		configAbsPath, err := filepath.Abs(confFile)
+		if err != nil {
+			return installMsg{err}
+		}
+
 		svc, err := watchdservice.New(
 			context.Background(),
-			watchdservice.WithArgs([]string{"-c", confFile}),
+			watchdservice.WithArgs([]string{"-c", configAbsPath}),
 		)
 		if err != nil {
 			return installMsg{err}
@@ -145,6 +157,7 @@ func initialModel(defaultConfig string) model {
 		case 0:
 			t.Placeholder = fmt.Sprintf("Config file location (leave blank for default: %s)", m.defaultConfig)
 			t.Prompt = "Config file: "
+			t.PromptStyle = boldStyle
 			t.Focus()
 		case 1:
 			t.Placeholder = "Directory to watch (one per line)"
@@ -301,13 +314,13 @@ func (m model) Update(teaMsg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *model) updateInputs(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
-	for i := range m.inputs {
 
+	for i := range m.inputs {
 		// Style the input depending on focus
 		if i != m.focusIndex {
 			// Ensure focused state is removed
 			m.inputs[i].Blur()
-			m.inputs[i].PromptStyle = noStyle
+			m.inputs[i].PromptStyle = boldStyle
 			m.inputs[i].TextStyle = noStyle
 			continue
 		}
@@ -381,7 +394,7 @@ func (m *model) updateDirInputErrorAndStyle(i int) {
 
 	// Check to see if the directory exists
 	if stat, err := os.Stat(m.inputs[i].Value()); errors.Is(err, os.ErrNotExist) || !stat.IsDir() {
-		m.inputs[i].Err = errors.New("directory does not exist")
+		m.inputs[i].Err = errors.New("directory does not exist, please enter a valid path")
 		m.inputs[i].TextStyle = noStyle
 	} else {
 		m.inputs[i].Err = nil
@@ -401,32 +414,50 @@ func (m model) View() string {
 	if m.typing {
 		var b strings.Builder
 
-		b.WriteString("Ubuntu AD Watch Daemon Installer\n\n")
+		b.WriteString(titleStyle.Render("Ubuntu AD Watch Daemon Installer"))
+		b.WriteString("\n\n")
 
-		for i := range m.inputs {
-			_, _ = b.WriteString(m.inputs[i].View())
+		// Display config input and hint
+		b.WriteString(m.inputs[0].View())
+		if m.inputs[0].Err != nil {
+			b.WriteRune('\n')
+			b.WriteString(hintStyle.Render(fmt.Sprintf("%s: %s", m.inputs[0].Value(), m.inputs[0].Err.Error())))
+			b.WriteString("\n\n")
+		} else {
+			b.WriteString("\n\n\n")
+		}
+
+		if m.focusIndex > 0 && m.focusIndex < len(m.inputs) {
+			b.WriteString(focusedStyle.Render("Directories:"))
+		} else {
+			b.WriteString(boldStyle.Render("Directories:"))
+		}
+		b.WriteRune('\n')
+
+		// Display directory inputs
+		for i, v := range m.inputs[1:] {
+			_, _ = b.WriteString(v.View())
 			if i < len(m.inputs)-1 {
 				_, _ = b.WriteRune('\n')
 			}
 		}
 
+		// Display directory error if any
+		if m.focusIndex > 0 && m.focusIndex < len(m.inputs) && m.inputs[m.focusIndex].Err != nil {
+			b.WriteString(hintStyle.Render(fmt.Sprintf("%s: %s", m.inputs[m.focusIndex].Value(), m.inputs[m.focusIndex].Err.Error())))
+		}
+
+		// Display button
 		button := &blurredButton
 		if m.focusIndex == len(m.inputs) {
 			button = &focusedButton
 		}
 		_, _ = fmt.Fprintf(&b, "\n\n%s\n", *button)
 
-		// Display errors if any
-		for i := range m.inputs {
-			if m.inputs[i].Err != nil {
-				_, _ = b.WriteString(fmt.Sprintf("\n%s: %s", m.inputs[i].Value(), m.inputs[i].Err.Error()))
-			}
-		}
-
 		return b.String()
 	}
 
-	return fmt.Sprintln("Service was successfully installed and is now running.")
+	return fmt.Sprintln("Service adwatchd was successfully installed and is now running.")
 }
 
 // Start starts the interactive user experience.
