@@ -7,7 +7,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/ubuntu/adsys/cmd/adwatchd/internal/loghooks"
+	"github.com/ubuntu/adsys/internal/loghooks"
 )
 
 var buf bytes.Buffer
