@@ -58,7 +58,7 @@ func Init(name string, rootCmd cobra.Command, vip *viper.Viper, configChanged fu
 
 	if err := vip.ReadInConfig(); err != nil {
 		var e viper.ConfigFileNotFoundError
-		if errors.As(err, &e) {
+		if errors.As(err, &e) || !vip.IsSet("config") {
 			log.Infof(context.Background(), "No configuration file: %v.\nWe will only use the defaults, env variables or flags.", e)
 		} else {
 			return fmt.Errorf("invalid configuration file: %w", err)
