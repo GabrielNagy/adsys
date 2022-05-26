@@ -386,7 +386,7 @@ func waitForWrites(t *testing.T) {
 func assertGPTVersionEquals(t *testing.T, path string, version int) {
 	t.Helper()
 
-	syscall.Sync()
+	waitForWrites(t)
 	gptfile := filepath.Join(path, "gpt.ini")
 
 	// Wait for GPT.ini to be created
@@ -413,7 +413,7 @@ func assertGPTVersionEquals(t *testing.T, path string, version int) {
 func assertGPTVersionError(t *testing.T, path string) {
 	t.Helper()
 
-	syscall.Sync()
+	waitForWrites(t)
 	gptfile := filepath.Join(path, "gpt.ini")
 
 	// Wait for GPT.ini to be created
