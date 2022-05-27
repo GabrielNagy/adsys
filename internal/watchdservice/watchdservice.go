@@ -137,6 +137,16 @@ func (s *WatchdService) Start(ctx context.Context) (err error) {
 	decorate.OnError(&err, i18n.G("failed to start service"))
 	log.Info(ctx, "Starting service")
 
+	stat, err := s.service.Status()
+	if err != nil {
+		return err
+	}
+
+	// Only start if the service is not running.
+	if stat == service.StatusRunning {
+		return nil
+	}
+
 	if err := s.service.Start(); err != nil {
 		return err
 	}
@@ -148,6 +158,16 @@ func (s *WatchdService) Start(ctx context.Context) (err error) {
 func (s *WatchdService) Stop(ctx context.Context) (err error) {
 	decorate.OnError(&err, i18n.G("failed to stop service"))
 	log.Info(ctx, "Stopping service")
+
+	stat, err := s.service.Status()
+	if err != nil {
+		return err
+	}
+
+	// Only stop if the service is not stopped.
+	if stat == service.StatusStopped {
+		return nil
+	}
 
 	if err := s.service.Stop(); err != nil {
 		return err

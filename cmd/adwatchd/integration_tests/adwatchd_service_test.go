@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"testing"
@@ -53,7 +54,11 @@ func TestServiceStateChange(t *testing.T) {
 		tc := tc
 		name := name
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+			// Parallelization is not supported on Windows due to Service
+			// Control Manager reasons.
+			if runtime.GOOS != "windows" {
+				t.Parallel()
+			}
 
 			var err error
 
