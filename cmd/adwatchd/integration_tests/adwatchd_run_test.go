@@ -54,7 +54,8 @@ func TestRunWithForceWhenServiceIsRunning(t *testing.T) {
 	// Give time for the watcher itself to start
 	time.Sleep(time.Millisecond * 100)
 
-	err = app.Quit(syscall.SIGTERM)
+	err = terminateProc(syscall.SIGTERM)
+	// err = app.Quit(syscall.SIGTERM)
 	require.NoError(t, err, "Quitting should succeed")
 
 	select {
@@ -114,7 +115,8 @@ func TestRunReactsToConfigUpdates(t *testing.T) {
 	// TODO: fix verbosity assertion, should actually be 3 here
 	require.Equal(t, 2, app.Verbosity(), "Watcher should have updated verbosity")
 
-	err = app.Quit(syscall.SIGTERM)
+	err = terminateProc(syscall.SIGTERM)
+	// err = app.Quit(syscall.SIGTERM)
 	select {
 	case <-done:
 	case <-time.After(1 * time.Second):
@@ -139,7 +141,8 @@ func TestAppCanQuitWithSigterm(t *testing.T) {
 	// Give time for the watcher itself to start
 	time.Sleep(time.Millisecond * 100)
 
-	err = app.Quit(syscall.SIGTERM)
+	err = terminateProc(syscall.SIGTERM)
+	// err = app.Quit(syscall.SIGTERM)
 	require.NoError(t, err, "Quitting should succeed")
 
 	select {
@@ -164,7 +167,8 @@ func TestAppCanQuitWithSigint(t *testing.T) {
 	// Give time for the watcher itself to start
 	time.Sleep(time.Millisecond * 100)
 
-	err = app.Quit(syscall.SIGINT)
+	err = terminateProc(syscall.SIGINT)
+	// err = app.Quit(syscall.SIGINT)
 	require.NoError(t, err, "Quitting should succeed")
 
 	select {
