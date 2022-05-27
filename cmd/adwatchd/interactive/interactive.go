@@ -198,13 +198,20 @@ func (m model) Update(teaMsg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case tea.KeyUp, tea.KeyShiftTab:
-			// Set focus to previous input
+			// Set focus to previous input unless the directory input is invalid
+			if m.focusIndex > 0 && m.focusIndex < len(m.inputs) && m.inputs[m.focusIndex].Err != nil {
+				break
+			}
 			m.focusIndex--
 			if m.focusIndex < 0 {
 				m.focusIndex = len(m.inputs)
 			}
 
 		case tea.KeyDown, tea.KeyTab:
+			// Set focus to next input unless the directory input is invalid
+			if m.focusIndex > 0 && m.focusIndex < len(m.inputs) && m.inputs[m.focusIndex].Err != nil {
+				break
+			}
 			// Set focus to next input
 			m.focusIndex++
 			if m.focusIndex > len(m.inputs) {
@@ -361,7 +368,11 @@ func (m *model) updateConfigInputError() {
 
 	// If the config file does not exist, we're good
 	if errors.Is(err, os.ErrNotExist) {
-		m.inputs[0].Err = nil
+		if filepath.IsAbs(m.inputs[0].Value()) {
+			m.inputs[0].Err = nil
+		} else {
+			m.inputs[0].Err = errors.New("will be the absolute path")
+		}
 		return
 	}
 
@@ -421,7 +432,8 @@ func (m model) View() string {
 		b.WriteString(m.inputs[0].View())
 		if m.inputs[0].Err != nil {
 			b.WriteRune('\n')
-			b.WriteString(hintStyle.Render(fmt.Sprintf("%s: %s", m.inputs[0].Value(), m.inputs[0].Err.Error())))
+			absPath, _ := filepath.Abs(m.inputs[0].Value())
+			b.WriteString(hintStyle.Render(fmt.Sprintf("%s: %s", absPath, m.inputs[0].Err.Error())))
 			b.WriteString("\n\n")
 		} else {
 			b.WriteString("\n\n\n")
@@ -444,7 +456,8 @@ func (m model) View() string {
 
 		// Display directory error if any
 		if m.focusIndex > 0 && m.focusIndex < len(m.inputs) && m.inputs[m.focusIndex].Err != nil {
-			b.WriteString(hintStyle.Render(fmt.Sprintf("%s: %s", m.inputs[m.focusIndex].Value(), m.inputs[m.focusIndex].Err.Error())))
+			absPath, _ := filepath.Abs(m.inputs[m.focusIndex].Value())
+			b.WriteString(hintStyle.Render(fmt.Sprintf("%s: %s", absPath, m.inputs[m.focusIndex].Err.Error())))
 		}
 
 		// Display button
