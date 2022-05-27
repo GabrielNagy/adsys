@@ -278,7 +278,9 @@ func watchSubDirs(ctx context.Context, fsWatcher *fsnotify.Watcher, path string)
 }
 
 // getRootDir returns the configured directory of the given file path. It
-// handles nested directories by returning the most nested one.
+// handles nested directories by returning the most nested one. It ensures paths
+// are compatible by normalizing them first (e.g. removing trailing slashes,
+// replacing backslashes with slashes).
 func getRootDir(path string, rootDirs []string) (string, error) {
 	path = filepath.ToSlash(filepath.Clean(path))
 	var rootDir string

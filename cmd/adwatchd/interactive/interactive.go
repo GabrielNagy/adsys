@@ -32,10 +32,6 @@ var (
 	submitText    = i18n.G("Install")
 	focusedButton = focusedStyle.Copy().Render(fmt.Sprintf("[ %s ]", submitText))
 	blurredButton = fmt.Sprintf("[ %s ]", blurredStyle.Render(submitText))
-
-	// Add a thick border to the top and bottom.
-	border = lipgloss.NewStyle().
-		Border(lipgloss.ThickBorder(), true, false)
 )
 
 type model struct {
@@ -68,14 +64,24 @@ type installMsg struct {
 // writeConfig writes the config to the given file, checking whether the directories
 // that are passed in actually exist.
 func (m model) writeConfig(confFile string, dirs []string) error {
+	var absDirs []string
+
 	if len(dirs) == 1 && dirs[0] == "" {
 		return fmt.Errorf(i18n.G("needs at least one directory to watch"))
 	}
 
+	// Make sure all directories exist, and compute absolute paths for them
+	// before writing the config file.
 	for _, dir := range dirs {
 		if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf(i18n.G("directory %q does not exist"), dir)
 		}
+
+		absPath, err := filepath.Abs(dir)
+		if err != nil {
+			return fmt.Errorf(i18n.G("failed to get absolute path for %q: %v"), dir, err)
+		}
+		absDirs = append(absDirs, filepath.Clean(absPath))
 	}
 
 	// Empty input means using the default config file
@@ -83,18 +89,19 @@ func (m model) writeConfig(confFile string, dirs []string) error {
 		confFile = m.defaultConfig
 	}
 
+	// Make sure the directory structure exists for the config file
 	if err := os.MkdirAll(filepath.Dir(confFile), 0755); err != nil {
 		return fmt.Errorf("unable to create config directory: %v", err)
 	}
 
-	cfg := appConfig{Dirs: dirs, Verbose: 3}
+	cfg := appConfig{Dirs: absDirs, Verbose: 0}
 	data, err := yaml.Marshal(&cfg)
 	if err != nil {
 		return fmt.Errorf("unable to marshal config: %v", err)
 	}
 
 	if err := os.WriteFile(confFile, data, 0644); err != nil {
-		return fmt.Errorf("unable to write config: %v", err)
+		return fmt.Errorf("unable to write config file: %v", err)
 	}
 
 	return nil
@@ -198,24 +205,27 @@ func (m model) Update(teaMsg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case tea.KeyUp, tea.KeyShiftTab:
-			// Set focus to previous input unless the directory input is invalid
+			// Block if the directory input is invalid
 			if m.focusIndex > 0 && m.focusIndex < len(m.inputs) && m.inputs[m.focusIndex].Err != nil {
 				break
 			}
+
+			// Set focus to previous input
 			m.focusIndex--
 			if m.focusIndex < 0 {
-				m.focusIndex = len(m.inputs)
+				m.focusIndex = 0
 			}
 
 		case tea.KeyDown, tea.KeyTab:
-			// Set focus to next input unless the directory input is invalid
+			// Block if the directory input is invalid
 			if m.focusIndex > 0 && m.focusIndex < len(m.inputs) && m.inputs[m.focusIndex].Err != nil {
 				break
 			}
+
 			// Set focus to next input
 			m.focusIndex++
 			if m.focusIndex > len(m.inputs) {
-				m.focusIndex = 0
+				m.focusIndex = len(m.inputs)
 			}
 
 		case tea.KeyBackspace:
@@ -229,6 +239,9 @@ func (m model) Update(teaMsg tea.Msg) (tea.Model, tea.Cmd) {
 			// Backspace on submit: go to previous one
 			if m.focusIndex == len(m.inputs) {
 				m.focusIndex--
+				// tell that we already handled backspace by changing the message type to nothing
+				// This prevents input to handle again backspace.
+				teaMsg = struct{}{}
 				break
 			}
 
@@ -242,7 +255,7 @@ func (m model) Update(teaMsg tea.Msg) (tea.Model, tea.Cmd) {
 				m.inputs = slices.Delete(m.inputs, m.focusIndex, m.focusIndex+1)
 				m.focusIndex--
 				// tell that we already handled backspace by changing the message type to nothing
-				// Tis prevents input to handle again backspace.
+				// This prevents input to handle again backspace.
 				teaMsg = struct{}{}
 				break
 			}
@@ -364,6 +377,7 @@ func (m *model) updateConfigInputError() {
 		return
 	}
 
+	absPath, _ := filepath.Abs(m.inputs[0].Value())
 	stat, err := os.Stat(m.inputs[0].Value())
 
 	// If the config file does not exist, we're good
@@ -371,7 +385,7 @@ func (m *model) updateConfigInputError() {
 		if filepath.IsAbs(m.inputs[0].Value()) {
 			m.inputs[0].Err = nil
 		} else {
-			m.inputs[0].Err = errors.New("will be the absolute path")
+			m.inputs[0].Err = fmt.Errorf("%s will be the absolute path", absPath)
 		}
 		return
 	}
@@ -383,12 +397,12 @@ func (m *model) updateConfigInputError() {
 	}
 
 	if stat.IsDir() {
-		m.inputs[0].Err = errors.New("is a directory; will create adwatchd.yml inside")
+		m.inputs[0].Err = fmt.Errorf("%s is a directory; will create adwatchd.yml inside", absPath)
 		return
 	}
 
 	if stat.Mode().IsRegular() {
-		m.inputs[0].Err = errors.New("file already exists and will be overwritten")
+		m.inputs[0].Err = fmt.Errorf("%s: file already exists and will be overwritten", absPath)
 		return
 	}
 
@@ -399,13 +413,18 @@ func (m *model) updateDirInputErrorAndStyle(i int) {
 	// We consider an empty string to be valid, so users are allowed to press
 	// enter on it.
 	if m.inputs[i].Value() == "" {
-		m.inputs[i].Err = nil
+		if len(m.inputs) == 2 {
+			m.inputs[i].Err = errors.New("please enter at least one directory")
+		} else {
+			m.inputs[i].Err = nil
+		}
 		return
 	}
 
 	// Check to see if the directory exists
+	absPath, _ := filepath.Abs(m.inputs[i].Value())
 	if stat, err := os.Stat(m.inputs[i].Value()); errors.Is(err, os.ErrNotExist) || !stat.IsDir() {
-		m.inputs[i].Err = errors.New("directory does not exist, please enter a valid path")
+		m.inputs[i].Err = fmt.Errorf("%s: directory does not exist, please enter a valid path", absPath)
 		m.inputs[i].TextStyle = noStyle
 	} else {
 		m.inputs[i].Err = nil
@@ -432,8 +451,7 @@ func (m model) View() string {
 		b.WriteString(m.inputs[0].View())
 		if m.inputs[0].Err != nil {
 			b.WriteRune('\n')
-			absPath, _ := filepath.Abs(m.inputs[0].Value())
-			b.WriteString(hintStyle.Render(fmt.Sprintf("%s: %s", absPath, m.inputs[0].Err.Error())))
+			b.WriteString(hintStyle.Render(m.inputs[0].Err.Error()))
 			b.WriteString("\n\n")
 		} else {
 			b.WriteString("\n\n\n")
@@ -456,8 +474,7 @@ func (m model) View() string {
 
 		// Display directory error if any
 		if m.focusIndex > 0 && m.focusIndex < len(m.inputs) && m.inputs[m.focusIndex].Err != nil {
-			absPath, _ := filepath.Abs(m.inputs[m.focusIndex].Value())
-			b.WriteString(hintStyle.Render(fmt.Sprintf("%s: %s", absPath, m.inputs[m.focusIndex].Err.Error())))
+			b.WriteString(hintStyle.Render(m.inputs[m.focusIndex].Err.Error()))
 		}
 
 		// Display button

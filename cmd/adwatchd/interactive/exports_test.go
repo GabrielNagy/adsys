@@ -3,7 +3,7 @@ package interactive
 // InitialModelForTests returns an instance of the initial model that will not
 // install the service.
 func InitialModelForTests() model {
-	m := initialModel("adwatchd.yaml")
+	m := initialModel("adwatchd.yml")
 	m.dryrun = true
 	return m
 }
