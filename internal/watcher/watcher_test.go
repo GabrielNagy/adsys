@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
@@ -373,14 +372,6 @@ func TestDirs(t *testing.T) {
 	require.NoError(t, err, "Can't create watcher")
 
 	assert.Equal(t, []string{temp}, w.Dirs())
-}
-
-func waitForWrites(t *testing.T) {
-	t.Helper()
-
-	// Give time for the writes to be picked up
-	syscall.Sync()
-	time.Sleep(time.Millisecond * 100)
 }
 
 func assertGPTVersionEquals(t *testing.T, path string, version int) {
