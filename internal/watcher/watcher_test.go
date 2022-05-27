@@ -262,6 +262,7 @@ func TestUpdateDirs(t *testing.T) {
 	testutils.Copy(t, filepath.Join("testdata", "withsubdir"), destKeep)
 	testutils.Copy(t, filepath.Join("testdata", "withsubdir"), destRemove)
 	testutils.Copy(t, filepath.Join("testdata", "withsubdir"), destAdd)
+	waitForWrites(t, destKeep, destRemove, destAdd)
 
 	// Instantiate the object
 	w, err := watcher.New(context.Background(), []string{destRemove, destKeep})

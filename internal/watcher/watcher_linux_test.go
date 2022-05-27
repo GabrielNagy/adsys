@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func waitForWrites(t *testing.T) {
+func waitForWrites(t *testing.T, _ ...string) {
 	t.Helper()
 
 	// Give time for the writes to be picked up
