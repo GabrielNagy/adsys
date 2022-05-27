@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
@@ -137,7 +136,7 @@ func TestUpdateGPT(t *testing.T) {
 	require.NoError(t, err, "Can't write to file")
 
 	// Give time for the writes to be picked up
-	syscall.Sync()
+	// syscall.Sync()
 	time.Sleep(time.Millisecond * 100)
 
 	// Stop the service to trigger the GPT update
