@@ -143,7 +143,8 @@ If you wish to rerun the installer, please remove the service first.
 This can be done via the Services UI or by running: adwatchd service uninstall`))
 			}
 
-			if err := interactive.Start(context.Background(), a.viper.ConfigFileUsed()); err != nil {
+			configFileSet := a.rootCmd.Flags().Lookup("config").Changed
+			if err := interactive.Start(context.Background(), a.viper.ConfigFileUsed(), !configFileSet); err != nil {
 				return err
 			}
 

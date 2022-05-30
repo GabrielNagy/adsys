@@ -57,10 +57,6 @@ type installMsg struct {
 	err error
 }
 
-// TODO: check if entered directories actually exist (and show to user)
-// TODO: handle existing config file (maybe ask user if they want to overwrite?)
-// TODO: golden file testing
-
 // writeConfig writes the config to the given file, checking whether the
 // directories that are passed in actually exist. It receives a config file and
 // a slice of absolute sorted paths.
@@ -144,17 +140,51 @@ func (m model) installService(confFile string, dirsMap map[string]struct{}) tea.
 	}
 }
 
-func initialModel(defaultConfig string) model {
+// getDirsFromConfig unmarshals and returns the directories from the passed in
+// config file.
+func getDirsFromConfig(configFile string) []string {
+	var dirs []string
+	if config, err := os.ReadFile(configFile); err == nil {
+		cfg := appConfig{}
+		if err := yaml.Unmarshal([]byte(config), &cfg); err == nil {
+			dirs = cfg.Dirs
+		}
+	}
+	return dirs
+}
+
+// filterAbsentDirs returns only the existing directories from the passed in
+// slice.
+func filterAbsentDirs(dirs []string) []string {
+	var filtered []string
+	for _, dir := range dirs {
+		if stat, err := os.Stat(dir); err == nil && stat.IsDir() {
+			filtered = append(filtered, dir)
+		}
+	}
+	return filtered
+}
+
+// initialModel builds and returns the initial model.
+func initialModel(configFile string, isDefault bool) model {
+	dirCount := 1
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 
+	// Attempt to read directories from the config file
+	previousDirs := getDirsFromConfig(configFile)
+	previousDirs = filterAbsentDirs(previousDirs)
+	if len(previousDirs) > 0 {
+		dirCount = len(previousDirs)
+	}
+
 	m := model{
-		// Start with a size of 2 (one for the config path, one for the first
-		// configured directory, the slice will be resized based on user input)
-		inputs:        make([]textinput.Model, 2),
+		// Start with a size of at least 2 (one for the config path, one for the first
+		// configured directory, the slice will be resized based on user input).
+		inputs:        make([]textinput.Model, dirCount+1),
 		spinner:       s,
 		typing:        true,
-		defaultConfig: defaultConfig,
+		defaultConfig: configFile,
 	}
 
 	var t textinput.Model
@@ -167,11 +197,23 @@ func initialModel(defaultConfig string) model {
 			t.Prompt = i18n.G("Config file: ")
 			t.PromptStyle = boldStyle
 			t.Focus()
+
+			// Only explicitly set the config file if it's not the default.
+			// Otherwise the placeholder is more helpful.
+			if !isDefault {
+				t.SetValue(m.defaultConfig)
+			}
 		case 1:
 			t.Placeholder = i18n.G("Directory to watch (one per line)")
 		}
 
 		m.inputs[i] = t
+	}
+
+	// If we managed to read directories from the "previous" config file,
+	// pre-fill them in
+	for index, dir := range previousDirs {
+		m.inputs[index+1].SetValue(dir)
 	}
 
 	return m
@@ -186,11 +228,12 @@ func newStyledTextInput() textinput.Model {
 	return t
 }
 
+// Init returns the initial command for the application to run.
 func (m model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-// Update updates the model based on the given message.
+// Update handles incoming events and updates the model accordingly.
 func (m model) Update(teaMsg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := teaMsg.(type) {
 	case installMsg:
@@ -399,7 +442,6 @@ func updateConfigInputError(input *textinput.Model) {
 		if filepath.IsAbs(value) {
 			input.Err = nil
 		} else {
-			// TODO (and others): wrap errors with i18n.G()
 			input.Err = fmt.Errorf(i18n.G("%s will be the absolute path"), absPath)
 		}
 		return
@@ -452,7 +494,7 @@ func (m *model) updateDirInputErrorAndStyle(i int) {
 
 }
 
-// View returns the view for the model.
+// View renders the UI based on the data in the model.
 func (m model) View() string {
 	if m.loading {
 		return fmt.Sprintf(i18n.G("%s installing service... please wait."), m.spinner.View())
@@ -513,8 +555,8 @@ func (m model) View() string {
 }
 
 // Start starts the interactive user experience.
-func Start(ctx context.Context, defaultConfig string) error {
-	p := tea.NewProgram(initialModel(defaultConfig))
+func Start(ctx context.Context, configFile string, isDefault bool) error {
+	p := tea.NewProgram(initialModel(configFile, isDefault))
 	if err := p.Start(); err != nil {
 		return err
 	}

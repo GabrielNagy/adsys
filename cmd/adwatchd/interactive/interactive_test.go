@@ -13,6 +13,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/adsys/cmd/adwatchd/interactive"
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -28,11 +29,11 @@ func TestInteractiveInput(t *testing.T) {
 		existingPaths []string
 		cfgToValidate string
 		absPathInput  bool
+
+		// Parameters for when we want to simulate a previous config file
+		configOverride bool
+		configDirs     []string
 	}{
-		// TODO: I would add:
-		// - one simple test with .. or . (you have it already, but in a way more complicated test)
-		// - one test with existing Paths without config path
-		// - one test with config path, ensure that previous config is loaded (unsure this was already taken into account in the code?)
 		"initial view": {
 			events:        []tea.Msg{},
 			existingPaths: []string{"foo/bar/", "foo/baz"},
@@ -65,6 +66,19 @@ func TestInteractiveInput(t *testing.T) {
 				tea.KeyMsg{Type: tea.KeyEnter},
 			},
 			existingPaths: []string{"foo/bar/"},
+		},
+		"previous config file is passed in and is empty or has no directories": {
+			configOverride: true,
+		},
+		"previous config file is passed in and contains directories which exist on the system": {
+			configOverride: true,
+			existingPaths:  []string{"foo/bar/", "foo/baz/"},
+			configDirs:     []string{"foo/bar", "foo/baz"},
+		},
+		"previous config file is passed in and contains directories, not all which exist on the system": {
+			configOverride: true,
+			existingPaths:  []string{"foo/bar/"},
+			configDirs:     []string{"foo/bar", "foo/baz"},
 		},
 
 		// Directory input behaviors
@@ -235,6 +249,19 @@ func TestInteractiveInput(t *testing.T) {
 			existingPaths: []string{"foo/bar/", "foo/baz/"},
 			cfgToValidate: "foo/bar/adwatchd.yml",
 		},
+		"submit with dot and double dot directories is normalized": {
+			events: []tea.Msg{
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("foo/baz/qux/./asd/../..")}, // baz
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(".")}, // #ABSPATH#
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyEnter},
+			},
+			existingPaths: []string{"foo/bar/", "foo/baz/"},
+			cfgToValidate: "adwatchd.yml",
+		},
 
 		// Other navigation behaviors
 		"other navigation tests": {
@@ -265,7 +292,8 @@ func TestInteractiveInput(t *testing.T) {
 			goldPath := filepath.Join(goldDir, strings.Replace(name, " ", "_", -1))
 
 			tmpdir := chdirToTempdir(t)
-			fmt.Println(tmpdir)
+
+			// Create existing directories/files
 			for _, path := range tc.existingPaths {
 				if strings.HasSuffix(path, "/") {
 					err = os.MkdirAll(path, 0755)
@@ -278,7 +306,16 @@ func TestInteractiveInput(t *testing.T) {
 					require.NoError(t, err, "could not write sample file")
 				}
 			}
-			m, _ := interactive.InitialModelForTests().Update(nil)
+
+			// Create previous/existing config file if needed
+			if len(tc.configDirs) > 0 {
+				data, err := yaml.Marshal(&interactive.AppConfig{Dirs: tc.configDirs})
+				require.NoError(t, err, "could not marshal config")
+				err = os.WriteFile("adwatchd.yml", data, 0644)
+				require.NoError(t, err, "could not write previous config")
+			}
+
+			m, _ := interactive.InitialModelForTests(!tc.configOverride).Update(nil)
 
 			for _, e := range tc.events {
 				keyMsg, ok := e.(tea.KeyMsg)
