@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// waitForWrites waits for test I/O to be picked up.
 func waitForWrites(t *testing.T, _ ...string) {
 	t.Helper()
 

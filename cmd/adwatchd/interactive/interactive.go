@@ -61,27 +61,19 @@ type installMsg struct {
 // TODO: handle existing config file (maybe ask user if they want to overwrite?)
 // TODO: golden file testing
 
-// writeConfig writes the config to the given file, checking whether the directories
-// that are passed in actually exist.
+// writeConfig writes the config to the given file, checking whether the
+// directories that are passed in actually exist. It receives a config file and
+// a slice of absolute sorted paths.
 func (m model) writeConfig(confFile string, dirs []string) error {
-	var absDirs []string
-
 	if len(dirs) == 1 && dirs[0] == "" {
 		return fmt.Errorf(i18n.G("needs at least one directory to watch"))
 	}
 
-	// Make sure all directories exist, and compute absolute paths for them
-	// before writing the config file.
+	// Make sure all directories exist
 	for _, dir := range dirs {
 		if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf(i18n.G("directory %q does not exist"), dir)
 		}
-
-		absPath, err := filepath.Abs(dir)
-		if err != nil {
-			return fmt.Errorf(i18n.G("failed to get absolute path for %q: %v"), dir, err)
-		}
-		absDirs = append(absDirs, filepath.Clean(absPath))
 	}
 
 	// Empty input means using the default config file
@@ -91,17 +83,17 @@ func (m model) writeConfig(confFile string, dirs []string) error {
 
 	// Make sure the directory structure exists for the config file
 	if err := os.MkdirAll(filepath.Dir(confFile), 0755); err != nil {
-		return fmt.Errorf("unable to create config directory: %v", err)
+		return fmt.Errorf(i18n.G("unable to create config directory: %v"), err)
 	}
 
-	cfg := appConfig{Dirs: absDirs, Verbose: 0}
+	cfg := appConfig{Dirs: dirs, Verbose: 0}
 	data, err := yaml.Marshal(&cfg)
 	if err != nil {
-		return fmt.Errorf("unable to marshal config: %v", err)
+		return fmt.Errorf(i18n.G("unable to marshal config: %v"), err)
 	}
 
 	if err := os.WriteFile(confFile, data, 0644); err != nil {
-		return fmt.Errorf("unable to write config file: %v", err)
+		return fmt.Errorf(i18n.G("unable to write config file: %v"), err)
 	}
 
 	return nil
@@ -109,12 +101,21 @@ func (m model) writeConfig(confFile string, dirs []string) error {
 
 // installService writes the configuration file and installs the service with
 // the file as an argument.
-func (m model) installService(confFile string, dirs []string) tea.Cmd {
+func (m model) installService(confFile string, dirsMap map[string]struct{}) tea.Cmd {
 	return func() tea.Msg {
 		// If the user typed in a directory, create the config file inside it
 		if stat, err := os.Stat(confFile); err == nil && stat.IsDir() {
 			confFile = filepath.Join(confFile, "adwatchd.yml")
 		}
+
+		// Convert directories to a string slice
+		var dirs []string
+		for dir := range dirsMap {
+			dirs = append(dirs, dir)
+		}
+
+		// Sort the directories to avoid nondeterministic behavior
+		slices.Sort(dirs)
 
 		if err := m.writeConfig(confFile, dirs); err != nil {
 			return installMsg{err}
@@ -133,7 +134,7 @@ func (m model) installService(confFile string, dirs []string) tea.Cmd {
 			return installMsg{err}
 		}
 
-		// Only install service on real system
+		// Only install service on a real system
 		if m.dryrun {
 			return installMsg{nil}
 		}
@@ -148,7 +149,7 @@ func initialModel(defaultConfig string) model {
 	s.Spinner = spinner.Dot
 
 	m := model{
-		// start with a size of 2 (one for the config path, one for the first
+		// Start with a size of 2 (one for the config path, one for the first
 		// configured directory, the slice will be resized based on user input)
 		inputs:        make([]textinput.Model, 2),
 		spinner:       s,
@@ -162,12 +163,12 @@ func initialModel(defaultConfig string) model {
 
 		switch i {
 		case 0:
-			t.Placeholder = fmt.Sprintf("Config file location (leave blank for default: %s)", m.defaultConfig)
-			t.Prompt = "Config file: "
+			t.Placeholder = fmt.Sprintf(i18n.G("Config file location (leave blank for default: %s)"), m.defaultConfig)
+			t.Prompt = i18n.G("Config file: ")
 			t.PromptStyle = boldStyle
 			t.Focus()
 		case 1:
-			t.Placeholder = "Directory to watch (one per line)"
+			t.Placeholder = i18n.G("Directory to watch (one per line)")
 		}
 
 		m.inputs[i] = t
@@ -176,6 +177,7 @@ func initialModel(defaultConfig string) model {
 	return m
 }
 
+// newStyledTextInput returns a new text input with the default style.
 func newStyledTextInput() textinput.Model {
 	t := textinput.New()
 	t.CursorStyle = cursorStyle
@@ -188,6 +190,7 @@ func (m model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
+// Update updates the model based on the given message.
 func (m model) Update(teaMsg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := teaMsg.(type) {
 	case installMsg:
@@ -264,12 +267,20 @@ func (m model) Update(teaMsg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			// Did the user press enter while the submit button was focused?
 			if m.focusIndex == len(m.inputs) {
-				var dirs []string
 				var confFile string
+				var dirs = make(map[string]struct{})
 
+				// Normalize the directory inputs, skip duplicates and empty
+				// ones
 				for _, i := range m.inputs[1:] {
 					if i.Value() != "" {
-						dirs = append(dirs, i.Value())
+						absDir, err := filepath.Abs(i.Value())
+						if err != nil {
+							m.err = err
+							return m, nil
+						}
+
+						dirs[filepath.Clean(absDir)] = struct{}{}
 					}
 				}
 
@@ -332,6 +343,7 @@ func (m model) Update(teaMsg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// updateInputs handles the input of the user.
 func (m *model) updateInputs(msg tea.Msg) tea.Cmd {
 	var cmds []tea.Cmd
 
@@ -362,7 +374,7 @@ func (m *model) updateInputs(msg tea.Msg) tea.Cmd {
 		if m.focusIndex > 0 {
 			m.updateDirInputErrorAndStyle(i)
 		} else {
-			m.updateConfigInputError()
+			updateConfigInputError(&m.inputs[0])
 		}
 		cmds = append(cmds, update)
 	}
@@ -370,81 +382,90 @@ func (m *model) updateInputs(msg tea.Msg) tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-func (m *model) updateConfigInputError() {
+// updateConfigInputError updates the error state of the config input.
+func updateConfigInputError(input *textinput.Model) {
+	value := input.Value()
 	// If the config input is empty, clean up the error message
-	if m.inputs[0].Value() == "" {
-		m.inputs[0].Err = nil
+	if value == "" {
+		input.Err = nil
 		return
 	}
 
-	absPath, _ := filepath.Abs(m.inputs[0].Value())
-	stat, err := os.Stat(m.inputs[0].Value())
+	absPath, _ := filepath.Abs(value)
+	stat, err := os.Stat(value)
 
 	// If the config file does not exist, we're good
 	if errors.Is(err, os.ErrNotExist) {
-		if filepath.IsAbs(m.inputs[0].Value()) {
-			m.inputs[0].Err = nil
+		if filepath.IsAbs(value) {
+			input.Err = nil
 		} else {
-			m.inputs[0].Err = fmt.Errorf("%s will be the absolute path", absPath)
+			// TODO (and others): wrap errors with i18n.G()
+			input.Err = fmt.Errorf(i18n.G("%s will be the absolute path"), absPath)
 		}
 		return
 	}
 
 	// If we got another error, display it
 	if err != nil {
-		m.inputs[0].Err = err
+		input.Err = err
 		return
 	}
 
 	if stat.IsDir() {
-		m.inputs[0].Err = fmt.Errorf("%s is a directory; will create adwatchd.yml inside", absPath)
+		input.Err = fmt.Errorf(i18n.G("%s is a directory; will create adwatchd.yml inside"), absPath)
 		return
 	}
 
 	if stat.Mode().IsRegular() {
-		m.inputs[0].Err = fmt.Errorf("%s: file already exists and will be overwritten", absPath)
+		input.Err = fmt.Errorf(i18n.G("%s: file already exists and will be overwritten"), absPath)
 		return
 	}
 
-	m.inputs[0].Err = nil
+	input.Err = nil
 }
 
+// updateDirInputErrorAndStyle updates the error message and style of the given directory input.
 func (m *model) updateDirInputErrorAndStyle(i int) {
 	// We consider an empty string to be valid, so users are allowed to press
 	// enter on it.
 	if m.inputs[i].Value() == "" {
 		if len(m.inputs) == 2 {
-			m.inputs[i].Err = errors.New("please enter at least one directory")
+			m.inputs[i].Err = errors.New(i18n.G("please enter at least one directory"))
 		} else {
 			m.inputs[i].Err = nil
 		}
 		return
 	}
 
-	// Check to see if the directory exists
+	// Check to see if the input exists, and if it is a directory
 	absPath, _ := filepath.Abs(m.inputs[i].Value())
-	if stat, err := os.Stat(m.inputs[i].Value()); errors.Is(err, os.ErrNotExist) || !stat.IsDir() {
-		m.inputs[i].Err = fmt.Errorf("%s: directory does not exist, please enter a valid path", absPath)
+	if stat, err := os.Stat(absPath); err != nil {
+		m.inputs[i].Err = fmt.Errorf(i18n.G("%s: directory does not exist, please enter a valid path"), absPath)
+		m.inputs[i].TextStyle = noStyle
+	} else if !stat.IsDir() {
+		m.inputs[i].Err = fmt.Errorf(i18n.G("%s: is not a directory"), absPath)
 		m.inputs[i].TextStyle = noStyle
 	} else {
 		m.inputs[i].Err = nil
 		m.inputs[i].TextStyle = successStyle
 	}
+
 }
 
+// View returns the view for the model.
 func (m model) View() string {
 	if m.loading {
-		return fmt.Sprintf("%s installing service... please wait.", m.spinner.View())
+		return fmt.Sprintf(i18n.G("%s installing service... please wait."), m.spinner.View())
 	}
 
 	if err := m.err; err != nil {
-		return fmt.Sprintf("Could not install service: %v\n", err)
+		return fmt.Sprintf(i18n.G("Could not install service: %v\n"), err)
 	}
 
 	if m.typing {
 		var b strings.Builder
 
-		b.WriteString(titleStyle.Render("Ubuntu AD Watch Daemon Installer"))
+		b.WriteString(titleStyle.Render(i18n.G("Ubuntu AD Watch Daemon Installer")))
 		b.WriteString("\n\n")
 
 		// Display config input and hint
@@ -457,10 +478,11 @@ func (m model) View() string {
 			b.WriteString("\n\n\n")
 		}
 
+		directoriesMsg := i18n.G("Directories:")
 		if m.focusIndex > 0 && m.focusIndex < len(m.inputs) {
-			b.WriteString(focusedStyle.Render("Directories:"))
+			b.WriteString(focusedStyle.Render(directoriesMsg))
 		} else {
-			b.WriteString(boldStyle.Render("Directories:"))
+			b.WriteString(boldStyle.Render(directoriesMsg))
 		}
 		b.WriteRune('\n')
 
@@ -487,7 +509,7 @@ func (m model) View() string {
 		return b.String()
 	}
 
-	return fmt.Sprintln("Service adwatchd was successfully installed and is now running.")
+	return fmt.Sprintln(i18n.G("Service adwatchd was successfully installed and is now running."))
 }
 
 // Start starts the interactive user experience.

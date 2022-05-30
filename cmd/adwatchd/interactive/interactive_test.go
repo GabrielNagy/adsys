@@ -27,9 +27,12 @@ func TestInteractiveInput(t *testing.T) {
 		events        []tea.Msg
 		existingPaths []string
 		cfgToValidate string
-
-		absPathInput bool
+		absPathInput  bool
 	}{
+		// TODO: I would add:
+		// - one simple test with .. or . (you have it already, but in a way more complicated test)
+		// - one test with existing Paths without config path
+		// - one test with config path, ensure that previous config is loaded (unsure this was already taken into account in the code?)
 		"initial view": {
 			events:        []tea.Msg{},
 			existingPaths: []string{"foo/bar/", "foo/baz"},
@@ -89,6 +92,29 @@ func TestInteractiveInput(t *testing.T) {
 				tea.KeyMsg{Type: tea.KeyShiftTab},
 				tea.KeyMsg{Type: tea.KeyShiftTab},
 			},
+		},
+		"dot and double dot directory inputs are normalized": {
+			events: []tea.Msg{
+				tea.KeyMsg{Type: tea.KeyDown},
+				tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("foo/bar/./qux/../../baz")},
+			},
+		},
+		"directory is a file, block input": {
+			events: []tea.Msg{
+				tea.KeyMsg{Type: tea.KeyDown},
+				tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("foo/bar")},
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyUp},
+				tea.KeyMsg{Type: tea.KeyUp},
+				tea.KeyMsg{Type: tea.KeyDown},
+				tea.KeyMsg{Type: tea.KeyDown},
+				tea.KeyMsg{Type: tea.KeyTab},
+				tea.KeyMsg{Type: tea.KeyTab},
+				tea.KeyMsg{Type: tea.KeyShiftTab},
+				tea.KeyMsg{Type: tea.KeyShiftTab},
+			},
+			existingPaths: []string{"foo/bar"},
 		},
 		"multiple existing directories, can cycle between the inputs": {
 			events: []tea.Msg{
@@ -177,6 +203,37 @@ func TestInteractiveInput(t *testing.T) {
 			},
 			existingPaths: []string{"foo/bar/", "foo/baz/"},
 			cfgToValidate: "aaa/bbb/ccc/my_config.yml",
+		},
+		"submit with duplicate directories": {
+			events: []tea.Msg{
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("foo/bar")},
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("foo/bar/../")},
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("foo/baz")},
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("foo/baz")},
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("foo/baz/abc/../")},
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyEnter},
+			},
+			existingPaths: []string{"foo/bar/", "foo/baz/"},
+			cfgToValidate: "adwatchd.yml",
+		},
+		"submit with directory as config input": {
+			events: []tea.Msg{
+				tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("foo/bar")},
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("foo/baz")},
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyEnter},
+			},
+			existingPaths: []string{"foo/bar/", "foo/baz/"},
+			cfgToValidate: "foo/bar/adwatchd.yml",
 		},
 
 		// Other navigation behaviors
