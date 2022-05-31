@@ -12,6 +12,8 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 	"github.com/stretchr/testify/require"
 	"github.com/ubuntu/adsys/cmd/adwatchd/commands"
 	log "github.com/ubuntu/adsys/internal/grpc/logstreamer"
@@ -27,6 +29,9 @@ var (
 
 func TestInteractiveInput(t *testing.T) {
 	t.Parallel()
+
+	// Simulate a color terminal
+	lipgloss.SetColorProfile(termenv.ANSI256)
 
 	tests := map[string]struct {
 		events        []tea.Msg
