@@ -1,6 +1,7 @@
 package watchdtui_test
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -12,6 +13,9 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/require"
+	"github.com/ubuntu/adsys/cmd/adwatchd/commands"
+	log "github.com/ubuntu/adsys/internal/grpc/logstreamer"
+	"github.com/ubuntu/adsys/internal/watchdservice"
 	"github.com/ubuntu/adsys/internal/watchdtui"
 	"gopkg.in/yaml.v2"
 )
@@ -378,6 +382,50 @@ func TestInteractiveInput(t *testing.T) {
 	}
 }
 
+func TestInteractiveInstall(t *testing.T) {
+	if os.Getenv("ADWATCHD_RUN_INTEGRATION_TESTS") == "" {
+		t.Skip("Integration tests skipped as requested")
+	}
+
+	svc, err := watchdservice.New(context.Background())
+	require.NoError(t, err, "Cannot initialize watchd service")
+
+	t.Cleanup(func() {
+		err = svc.Uninstall(context.Background())
+		require.NoError(t, err, "Cannot uninstall watchd service")
+	})
+
+	_ = chdirToTempdir(t)
+
+	// Create existing directories/files
+	err = os.MkdirAll("foo/bar", 0755)
+	require.NoError(t, err, "can't create directories")
+	err = os.MkdirAll("foo/baz", 0755)
+	require.NoError(t, err, "can't create directories")
+
+	m, _ := watchdtui.InitialModel().Update(nil)
+
+	m = updateModel(t, m, tea.KeyMsg{Type: tea.KeyEnter}) // use default config
+
+	// add directories
+	for _, dir := range []string{"foo/bar", "foo/baz"} {
+		m = updateModel(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(dir)})
+		m = updateModel(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+	}
+
+	// submit
+	m = updateModel(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+	m = updateModel(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+
+	out := m.View()
+	goldOutput := "Service adwatchd was successfully installed and is now running.\n"
+	require.Equal(t, goldOutput, out, "Didn't get expected output")
+
+	status, err := svc.Status(context.Background())
+	require.NoError(t, err, "Cannot get status")
+	require.Contains(t, status, "running", "Expected service to be running")
+}
+
 // updateModel calls Update() on the model and executes returned commands.
 // It will reexecute Update() until there are no more returned commands.
 func updateModel(t *testing.T, m tea.Model, msg tea.Msg) tea.Model {
@@ -423,14 +471,6 @@ func updateModel(t *testing.T, m tea.Model, msg tea.Msg) tea.Model {
 	return updateModel(t, m, messageCandidates)
 }
 
-func TestMain(m *testing.M) {
-	flag.BoolVar(&update, "update", false, "update golden files")
-	flag.BoolVar(&stdout, "stdout", false, "print output to stdout for debugging purposes")
-	flag.Parse()
-
-	m.Run()
-}
-
 func chdirToTempdir(t *testing.T) string {
 	t.Helper()
 
@@ -462,4 +502,23 @@ func parseOutput(t *testing.T, out string) string {
 	// Replace cwd with a deterministic placeholder
 	out = strings.Replace(out, cwd, "#ABSPATH#", -1)
 	return out
+}
+
+func TestMain(m *testing.M) {
+	// Running real command mock from service manager
+	if len(os.Args) > 0 && os.Args[1] == "run" {
+		app := commands.New()
+		err := app.Run()
+		if err != nil {
+			log.Error(context.Background(), err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
+	flag.BoolVar(&update, "update", false, "update golden files")
+	flag.BoolVar(&stdout, "stdout", false, "print output to stdout for debugging purposes")
+	flag.Parse()
+
+	m.Run()
 }

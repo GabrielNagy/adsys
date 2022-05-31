@@ -8,5 +8,12 @@ func InitialModelForTests(isDefaultConfig bool) model {
 	return m
 }
 
+// InitialModel returns an instance of the initial model with default values,
+// suitable for integration tests.
+func InitialModel() model {
+	m := initialModel("adwatchd.yml", true)
+	return m
+}
+
 type Model = model
 type AppConfig = appConfig

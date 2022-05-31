@@ -100,7 +100,7 @@ func (m model) writeConfig(confFile string, dirs []string) error {
 func (m model) installService(confFile string, dirsMap map[string]struct{}) tea.Cmd {
 	return func() tea.Msg {
 		// If the user typed in a directory, create the config file inside it
-		if stat, err := os.Stat(confFile); err == nil && stat.IsDir() {
+		if stat, err := os.Stat(confFile); confFile == "" || err == nil && stat.IsDir() {
 			confFile = filepath.Join(confFile, "adwatchd.yml")
 		}
 
