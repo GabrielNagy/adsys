@@ -11,8 +11,8 @@ import (
 	"github.com/kardianos/service"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/ubuntu/adsys/cmd/adwatchd/interactive"
 	log "github.com/ubuntu/adsys/internal/grpc/logstreamer"
+	"github.com/ubuntu/adsys/internal/watchdtui"
 	"golang.org/x/exp/slices"
 
 	"github.com/ubuntu/adsys/internal/cmdhandler"
@@ -144,7 +144,7 @@ This can be done via the Services UI or by running: adwatchd service uninstall`)
 			}
 
 			configFileSet := a.rootCmd.Flags().Lookup("config").Changed
-			if err := interactive.Start(context.Background(), a.viper.ConfigFileUsed(), !configFileSet); err != nil {
+			if err := watchdtui.Start(context.Background(), a.viper.ConfigFileUsed(), !configFileSet); err != nil {
 				return err
 			}
 

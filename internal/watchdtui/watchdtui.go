@@ -1,4 +1,4 @@
-package interactive
+package watchdtui
 
 import (
 	"context"
@@ -556,7 +556,7 @@ func (m model) View() string {
 	return fmt.Sprintln(i18n.G("Service adwatchd was successfully installed and is now running."))
 }
 
-// Start starts the interactive user experience.
+// Start starts the interactive TUI.
 func Start(ctx context.Context, configFile string, isDefault bool) error {
 	p := tea.NewProgram(initialModel(configFile, isDefault))
 	if err := p.Start(); err != nil {

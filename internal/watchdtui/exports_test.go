@@ -1,4 +1,4 @@
-package interactive
+package watchdtui
 
 // InitialModelForTests returns an instance of the initial model that will not
 // install the service.

@@ -1,4 +1,4 @@
-package interactive_test
+package watchdtui_test
 
 import (
 	"flag"
@@ -12,7 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/require"
-	"github.com/ubuntu/adsys/cmd/adwatchd/interactive"
+	"github.com/ubuntu/adsys/internal/watchdtui"
 	"gopkg.in/yaml.v2"
 )
 
@@ -320,13 +320,13 @@ func TestInteractiveInput(t *testing.T) {
 
 			// Create previous/existing config file if needed
 			if len(tc.configDirs) > 0 {
-				data, err := yaml.Marshal(&interactive.AppConfig{Dirs: tc.configDirs})
+				data, err := yaml.Marshal(&watchdtui.AppConfig{Dirs: tc.configDirs})
 				require.NoError(t, err, "could not marshal config")
 				err = os.WriteFile("adwatchd.yml", data, 0644)
 				require.NoError(t, err, "could not write previous config")
 			}
 
-			m, _ := interactive.InitialModelForTests(!tc.configOverride).Update(nil)
+			m, _ := watchdtui.InitialModelForTests(!tc.configOverride).Update(nil)
 
 			for _, e := range tc.events {
 				keyMsg, ok := e.(tea.KeyMsg)
