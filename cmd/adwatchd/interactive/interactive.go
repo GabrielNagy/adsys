@@ -144,11 +144,13 @@ func (m model) installService(confFile string, dirsMap map[string]struct{}) tea.
 // config file.
 func getDirsFromConfig(configFile string) []string {
 	var dirs []string
-	if config, err := os.ReadFile(configFile); err == nil {
-		cfg := appConfig{}
-		if err := yaml.Unmarshal([]byte(config), &cfg); err == nil {
-			dirs = cfg.Dirs
-		}
+	config, err := os.ReadFile(configFile)
+	if err != nil {
+		return dirs
+	}
+	cfg := appConfig{}
+	if err := yaml.Unmarshal([]byte(config), &cfg); err == nil {
+		dirs = cfg.Dirs
 	}
 	return dirs
 }
@@ -198,8 +200,8 @@ func initialModel(configFile string, isDefault bool) model {
 			t.PromptStyle = boldStyle
 			t.Focus()
 
-			// Only explicitly set the config file if it's not the default.
-			// Otherwise the placeholder is more helpful.
+			// Only prefill the config path if we received it via argument, even
+			// if it's the default one.
 			if !isDefault {
 				t.SetValue(m.defaultConfig)
 			}
@@ -211,7 +213,7 @@ func initialModel(configFile string, isDefault bool) model {
 	}
 
 	// If we managed to read directories from the "previous" config file,
-	// pre-fill them in
+	// prefill them
 	for index, dir := range previousDirs {
 		m.inputs[index+1].SetValue(dir)
 	}

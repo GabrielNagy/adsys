@@ -249,17 +249,28 @@ func TestInteractiveInput(t *testing.T) {
 			existingPaths: []string{"foo/bar/", "foo/baz/"},
 			cfgToValidate: "foo/bar/adwatchd.yml",
 		},
-		"submit with dot and double dot directories is normalized": {
+		"submit with dot directories is normalized": {
 			events: []tea.Msg{
 				tea.KeyMsg{Type: tea.KeyEnter},
-				tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("foo/baz/qux/./asd/../..")}, // baz
+				tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("./foo/./bar/./")},
 				tea.KeyMsg{Type: tea.KeyEnter},
 				tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(".")}, // #ABSPATH#
 				tea.KeyMsg{Type: tea.KeyEnter},
 				tea.KeyMsg{Type: tea.KeyEnter},
 				tea.KeyMsg{Type: tea.KeyEnter},
 			},
-			existingPaths: []string{"foo/bar/", "foo/baz/"},
+			existingPaths: []string{"foo/bar/"},
+			cfgToValidate: "adwatchd.yml",
+		},
+		"submit with double dot directories is normalized": {
+			events: []tea.Msg{
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("foo/baz/qux/asd/../..")}, // baz
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyEnter},
+				tea.KeyMsg{Type: tea.KeyEnter},
+			},
+			existingPaths: []string{"foo/baz/"},
 			cfgToValidate: "adwatchd.yml",
 		},
 
