@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/ubuntu/adsys/internal/i18n"
 	"github.com/ubuntu/adsys/internal/loghooks"
 	"github.com/ubuntu/adsys/internal/watcher"
+	"gopkg.in/yaml.v2"
 )
 
 // WatchdService contains the service and watcher.
@@ -250,16 +252,42 @@ func (s *WatchdService) Status(ctx context.Context) (status string, err error) {
 		serviceStatus = "undefined"
 	}
 
-	dirs := "none"
-	if s.watcher != nil {
-		dirs = strings.Join(s.watcher.Dirs(), "\n -")
+	var dirs []string
+	if svcArgs := s.getServiceArgs(); svcArgs != "" {
+		dirs = getDirsFromConfig(svcArgs)
 	}
 
 	status = fmt.Sprintf(i18n.G(`Service status: %s
 Watching directories:
- - %v`), serviceStatus, dirs)
+ - %s`), serviceStatus, dirs)
 
 	return status, nil
+}
+
+// getDirsFromConfig unmarshals and returns the directories from the passed in
+// config file.
+func getDirsFromConfig(args string) []string {
+	var dirs []string
+	_, configFile, found := strings.Cut(args, "-c")
+	if !found {
+		return dirs
+	}
+	configFile = strings.Trim(configFile, `" `)
+	log.Debugf(context.Background(), "Reading config file: %s", configFile)
+	config, err := os.ReadFile(configFile)
+	log.Debugln(context.Background(), config, err)
+	if err != nil {
+		return dirs
+	}
+
+	cfg := struct {
+		Dirs    []string
+		Verbose int
+	}{}
+	if err := yaml.Unmarshal([]byte(config), &cfg); err == nil {
+		dirs = cfg.Dirs
+	}
+	return dirs
 }
 
 // Install installs the watcher service and starts it if it doesn't
