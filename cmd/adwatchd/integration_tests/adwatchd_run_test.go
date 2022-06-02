@@ -12,8 +12,6 @@ import (
 )
 
 func TestRunFailsWhenServiceIsRunning(t *testing.T) {
-	t.Parallel()
-
 	var err error
 	watchDir := t.TempDir()
 	configPath := generateConfig(t, -1, watchDir)
@@ -31,8 +29,6 @@ func TestRunFailsWhenServiceIsRunning(t *testing.T) {
 }
 
 func TestRunWithForceWhenServiceIsRunning(t *testing.T) {
-	t.Parallel()
-
 	watchDir := t.TempDir()
 	configPath := generateConfig(t, -1, watchDir)
 
@@ -94,7 +90,7 @@ func TestRunReactsToConfigUpdates(t *testing.T) {
 	}()
 
 	// Give time for the watcher itself to start
-	time.Sleep(time.Millisecond * 100)
+	time.Sleep(time.Millisecond * 500)
 
 	// Replace the config file to trigger reload
 	testutils.Copy(t, newConfigPath, configPath)
