@@ -47,7 +47,7 @@ func generateConfig(t *testing.T, verbosity int, dirs ...string) string {
 		verboseContent = fmt.Sprintf("verbose: %d\n", verbosity)
 	}
 
-	dest := filepath.Join(t.TempDir(), "adwatchd.yaml")
+	dest := filepath.Join(t.TempDir(), "adwatchd.yml")
 	err := os.WriteFile(dest, []byte(fmt.Sprintf(`%sdirs:
 %s`, verboseContent, dirContent)), 0600)
 	require.NoError(t, err, "Setup: can't write configuration file")

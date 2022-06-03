@@ -169,7 +169,7 @@ This can be done via the Services UI or by running: adwatchd service uninstall`)
 }
 
 func defaultConfigPath() string {
-	return filepath.Join("adwatchd.yaml")
+	return filepath.Join("adwatchd.yml")
 }
 
 // Run executes the app.
