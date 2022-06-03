@@ -1,5 +1,6 @@
 package watchdservice
 
-func (s *WatchdService) getServiceArgs() string {
-	return ""
+// getServiceArgs is a dummy function to satisfy compilation on Linux.
+func (s *WatchdService) getServiceArgs() (string, error) {
+	return "", nil
 }

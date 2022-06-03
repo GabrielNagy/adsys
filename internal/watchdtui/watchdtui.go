@@ -13,10 +13,10 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ubuntu/adsys/cmd/adwatchd/watchdhelpers"
 	"github.com/ubuntu/adsys/internal/i18n"
 	"github.com/ubuntu/adsys/internal/watchdservice"
 	"golang.org/x/exp/slices"
-	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -57,44 +57,6 @@ type installMsg struct {
 	err error
 }
 
-// writeConfig writes the config to the given file, checking whether the
-// directories that are passed in actually exist. It receives a config file and
-// a slice of absolute sorted paths.
-func (m model) writeConfig(confFile string, dirs []string) error {
-	if len(dirs) == 1 && dirs[0] == "" {
-		return fmt.Errorf(i18n.G("needs at least one directory to watch"))
-	}
-
-	// Make sure all directories exist
-	for _, dir := range dirs {
-		if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf(i18n.G("directory %q does not exist"), dir)
-		}
-	}
-
-	// Empty input means using the default config file
-	if confFile == "" {
-		confFile = m.defaultConfig
-	}
-
-	// Make sure the directory structure exists for the config file
-	if err := os.MkdirAll(filepath.Dir(confFile), 0755); err != nil {
-		return fmt.Errorf(i18n.G("unable to create config directory: %v"), err)
-	}
-
-	cfg := appConfig{Dirs: dirs, Verbose: 0}
-	data, err := yaml.Marshal(&cfg)
-	if err != nil {
-		return fmt.Errorf(i18n.G("unable to marshal config: %v"), err)
-	}
-
-	if err := os.WriteFile(confFile, data, 0644); err != nil {
-		return fmt.Errorf(i18n.G("unable to write config file: %v"), err)
-	}
-
-	return nil
-}
-
 // installService writes the configuration file and installs the service with
 // the file as an argument.
 func (m model) installService(confFile string, dirsMap map[string]struct{}) tea.Cmd {
@@ -113,7 +75,7 @@ func (m model) installService(confFile string, dirsMap map[string]struct{}) tea.
 		// Sort the directories to avoid nondeterministic behavior
 		slices.Sort(dirs)
 
-		if err := m.writeConfig(confFile, dirs); err != nil {
+		if err := watchdhelpers.WriteConfig(confFile, dirs, m.defaultConfig); err != nil {
 			return installMsg{err}
 		}
 
@@ -140,33 +102,6 @@ func (m model) installService(confFile string, dirsMap map[string]struct{}) tea.
 	}
 }
 
-// getDirsFromConfig unmarshals and returns the directories from the passed in
-// config file.
-func getDirsFromConfig(configFile string) []string {
-	var dirs []string
-	config, err := os.ReadFile(configFile)
-	if err != nil {
-		return dirs
-	}
-	cfg := appConfig{}
-	if err := yaml.Unmarshal([]byte(config), &cfg); err == nil {
-		dirs = cfg.Dirs
-	}
-	return dirs
-}
-
-// filterAbsentDirs returns only the existing directories from the passed in
-// slice.
-func filterAbsentDirs(dirs []string) []string {
-	var filtered []string
-	for _, dir := range dirs {
-		if stat, err := os.Stat(dir); err == nil && stat.IsDir() {
-			filtered = append(filtered, dir)
-		}
-	}
-	return filtered
-}
-
 // initialModel builds and returns the initial model.
 func initialModel(configFile string, isDefault bool) model {
 	dirCount := 1
@@ -174,8 +109,8 @@ func initialModel(configFile string, isDefault bool) model {
 	s.Spinner = spinner.Dot
 
 	// Attempt to read directories from the config file
-	previousDirs := getDirsFromConfig(configFile)
-	previousDirs = filterAbsentDirs(previousDirs)
+	previousDirs := watchdhelpers.GetDirsFromConfigFile(configFile)
+	previousDirs = watchdhelpers.FilterAbsentDirs(previousDirs)
 	if len(previousDirs) > 0 {
 		dirCount = len(previousDirs)
 	}

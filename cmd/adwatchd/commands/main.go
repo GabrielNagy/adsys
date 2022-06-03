@@ -11,6 +11,7 @@ import (
 	"github.com/kardianos/service"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/ubuntu/adsys/cmd/adwatchd/watchdhelpers"
 	log "github.com/ubuntu/adsys/internal/grpc/logstreamer"
 	"github.com/ubuntu/adsys/internal/watchdtui"
 	"golang.org/x/exp/slices"
@@ -26,19 +27,14 @@ type App struct {
 	rootCmd cobra.Command
 	viper   *viper.Viper
 
-	config  appConfig
+	config  watchdhelpers.AppConfig
 	service *watchdservice.WatchdService
 	options options
 
 	ready chan struct{}
 }
 
-type appConfig struct {
-	Verbose int
-	Force   bool
-	Dirs    []string
-}
-
+// options are the configurable functional options of the application.
 type options struct {
 	name string
 }
@@ -67,7 +63,7 @@ func New(opts ...option) *App {
 			// Command parsing has been successful. Returns runtime (or configuration) error now and so, don't print usage.
 			cmd.SilenceUsage = true
 			err := config.Init("adwatchd", a.rootCmd, a.viper, func(refreshed bool) error {
-				var newConfig appConfig
+				var newConfig watchdhelpers.AppConfig
 				if err := config.LoadConfig(&newConfig, a.viper); err != nil {
 					return err
 				}

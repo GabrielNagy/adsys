@@ -4,17 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/kardianos/service"
+	"github.com/ubuntu/adsys/cmd/adwatchd/watchdhelpers"
 	"github.com/ubuntu/adsys/internal/decorate"
 	log "github.com/ubuntu/adsys/internal/grpc/logstreamer"
 	"github.com/ubuntu/adsys/internal/i18n"
 	"github.com/ubuntu/adsys/internal/loghooks"
 	"github.com/ubuntu/adsys/internal/watcher"
-	"gopkg.in/yaml.v2"
 )
 
 // WatchdService contains the service and watcher.
@@ -252,9 +250,14 @@ func (s *WatchdService) Status(ctx context.Context) (status string, err error) {
 		serviceStatus = "undefined"
 	}
 
+	// If the service is installed, attempt to figure out the configured
+	// directories.
 	var dirs []string
-	if svcArgs := s.getServiceArgs(); svcArgs != "" {
-		dirs = getDirsFromConfig(svcArgs)
+	if serviceStatus != "not installed" {
+		dirs, err = s.getDirsFromArgs()
+		if err != nil {
+			log.Warningf(ctx, "Failed to get directories from service arguments: %v", err)
+		}
 	}
 
 	status = fmt.Sprintf(i18n.G(`Service status: %s
@@ -264,30 +267,19 @@ Watching directories:
 	return status, nil
 }
 
-// getDirsFromConfig unmarshals and returns the directories from the passed in
-// config file.
-func getDirsFromConfig(args string) []string {
-	var dirs []string
-	_, configFile, found := strings.Cut(args, "-c")
-	if !found {
-		return dirs
-	}
-	configFile = strings.Trim(configFile, `" `)
-	log.Debugf(context.Background(), "Reading config file: %s", configFile)
-	config, err := os.ReadFile(configFile)
-	log.Debugln(context.Background(), config, err)
+// getDirsFromArgs returns the directories to watch from the service arguments.
+func (s *WatchdService) getDirsFromArgs() ([]string, error) {
+	args, err := s.getServiceArgs()
 	if err != nil {
-		return dirs
+		return nil, fmt.Errorf("failed to get service args: %v", err)
 	}
 
-	cfg := struct {
-		Dirs    []string
-		Verbose int
-	}{}
-	if err := yaml.Unmarshal([]byte(config), &cfg); err == nil {
-		dirs = cfg.Dirs
+	configFile, err := watchdhelpers.GetConfigFileFromArgs(args)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get config file from args: %v", err)
 	}
-	return dirs
+
+	return watchdhelpers.GetDirsFromConfigFile(configFile), nil
 }
 
 // Install installs the watcher service and starts it if it doesn't
