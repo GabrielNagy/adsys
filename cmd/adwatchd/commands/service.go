@@ -67,7 +67,11 @@ func (a *App) serviceStatus() *cobra.Command {
 		Short: i18n.G("Returns service status"),
 		Long:  i18n.G("Returns the status of the adwatchd service."),
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println(a.service.Status(context.Background()))
+			if status, err := a.service.Status(context.Background()); err != nil {
+				fmt.Println(err)
+			} else {
+				fmt.Println(status)
+			}
 		},
 	}
 }

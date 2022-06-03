@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/kardianos/service"
@@ -226,7 +227,7 @@ func (s *WatchdService) Restart(ctx context.Context) (err error) {
 // Status provides a status of the watcher service in a pretty format.
 func (s *WatchdService) Status(ctx context.Context) (status string, err error) {
 	decorate.OnError(&err, i18n.G("failed to retrieve status for service"))
-	log.Debug(ctx, "Getting status from service")
+	log.Debug(ctx, i18n.G("Getting status from service"))
 
 	uninstalledState := service.Status(42)
 	stat, err := s.service.Status()
@@ -239,47 +240,59 @@ func (s *WatchdService) Status(ctx context.Context) (status string, err error) {
 	var serviceStatus string
 	switch stat {
 	case service.StatusRunning:
-		serviceStatus = "running"
+		serviceStatus = i18n.G("running")
 	case service.StatusStopped:
-		serviceStatus = "stopped"
+		serviceStatus = i18n.G("stopped")
 	case service.StatusUnknown:
-		serviceStatus = "unknown"
+		serviceStatus = i18n.G("unknown")
 	case uninstalledState:
-		serviceStatus = "not installed"
+		serviceStatus = i18n.G("not installed")
 	default:
-		serviceStatus = "undefined"
+		serviceStatus = i18n.G("undefined")
 	}
 
 	// If the service is installed, attempt to figure out the configured
 	// directories.
 	var dirs []string
-	if serviceStatus != "not installed" {
-		dirs, err = s.getDirsFromArgs()
+	configFile := "no config file"
+	if stat != uninstalledState {
+		configFile, dirs, err = s.getConfigAndDirsFromArgs()
 		if err != nil {
-			log.Warningf(ctx, "Failed to get directories from service arguments: %v", err)
+			log.Warningf(ctx, i18n.G("Failed to get directories from service arguments: %v"), err)
 		}
 	}
 
-	status = fmt.Sprintf(i18n.G(`Service status: %s
-Watching directories:
- - %s`), serviceStatus, dirs)
+	var statStr strings.Builder
+	statStr.WriteString(fmt.Sprintf(i18n.G("Service status: %s"), serviceStatus))
+	statStr.WriteString("\n\n")
+	statStr.WriteString(fmt.Sprintf(i18n.G("Config file: %s\n"), configFile))
+	statStr.WriteString(i18n.G("Watched directories: "))
+
+	if len(dirs) == 0 {
+		statStr.WriteString("no configured directories")
+	}
+
+	for _, dir := range dirs {
+		statStr.WriteString(fmt.Sprintf("\n  - %s", dir))
+	}
+	status = statStr.String()
 
 	return status, nil
 }
 
 // getDirsFromArgs returns the directories to watch from the service arguments.
-func (s *WatchdService) getDirsFromArgs() ([]string, error) {
+func (s *WatchdService) getConfigAndDirsFromArgs() (string, []string, error) {
 	args, err := s.getServiceArgs()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get service args: %v", err)
+		return "", nil, fmt.Errorf("failed to get service args: %v", err)
 	}
 
 	configFile, err := watchdhelpers.GetConfigFileFromArgs(args)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get config file from args: %v", err)
+		return "", nil, fmt.Errorf("failed to get config file from args: %v", err)
 	}
 
-	return watchdhelpers.GetDirsFromConfigFile(configFile), nil
+	return configFile, watchdhelpers.GetDirsFromConfigFile(configFile), nil
 }
 
 // Install installs the watcher service and starts it if it doesn't
