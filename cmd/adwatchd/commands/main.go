@@ -87,7 +87,7 @@ func New(opts ...option) *App {
 				if !slices.Equal(oldDirs, a.config.Dirs) {
 					if a.service != nil {
 						if err := a.service.UpdateDirs(context.Background(), a.config.Dirs); err != nil {
-							log.Warningf(context.Background(), "failed to update directories: %v", err)
+							log.Warningf(context.Background(), i18n.G("failed to update directories: %v"), err)
 							a.config.Dirs = oldDirs
 						}
 					}
@@ -213,7 +213,7 @@ func (a *App) Reset() {
 func (a *App) Quit(sig syscall.Signal) error {
 	a.waitReady()
 	if !service.Interactive() {
-		return fmt.Errorf("not running in interactive mode")
+		return fmt.Errorf(i18n.G("not running in interactive mode"))
 	}
 
 	// The service package is responsible for handling the service stop. It

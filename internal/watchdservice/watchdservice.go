@@ -122,7 +122,7 @@ func New(ctx context.Context, opts ...option) (*WatchdService, error) {
 // UpdateDirs updates the watcher with the new directories.
 func (s *WatchdService) UpdateDirs(ctx context.Context, dirs []string) (err error) {
 	decorate.OnError(&err, i18n.G("failed to change directories to watch"))
-	log.Info(ctx, "Updating directories to watch")
+	log.Info(ctx, i18n.G("Updating directories to watch"))
 
 	if err := s.watcher.UpdateDirs(dirs); err != nil {
 		return err
@@ -136,7 +136,7 @@ func (s *WatchdService) UpdateDirs(ctx context.Context, dirs []string) (err erro
 // Start starts the watcher service.
 func (s *WatchdService) Start(ctx context.Context) (err error) {
 	decorate.OnError(&err, i18n.G("failed to start service"))
-	log.Info(ctx, "Starting service")
+	log.Info(ctx, i18n.G("Starting service"))
 
 	stat, err := s.service.Status()
 	if err != nil {
@@ -158,7 +158,7 @@ func (s *WatchdService) Start(ctx context.Context) (err error) {
 // Stop stops the watcher service.
 func (s *WatchdService) Stop(ctx context.Context) (err error) {
 	decorate.OnError(&err, i18n.G("failed to stop service"))
-	log.Info(ctx, "Stopping service")
+	log.Info(ctx, i18n.G("Stopping service"))
 
 	stat, err := s.service.Status()
 	if err != nil {
@@ -203,7 +203,7 @@ func (s *WatchdService) waitForStatus(ctx context.Context, status service.Status
 // Restart restarts the watcher service.
 func (s *WatchdService) Restart(ctx context.Context) (err error) {
 	decorate.OnError(&err, i18n.G("failed to restart service"))
-	log.Info(ctx, "Restarting service")
+	log.Info(ctx, i18n.G("Restarting service"))
 
 	stat, err := s.service.Status()
 	if err != nil {
@@ -254,7 +254,7 @@ func (s *WatchdService) Status(ctx context.Context) (status string, err error) {
 	// If the service is installed, attempt to figure out the configured
 	// directories.
 	var dirs []string
-	configFile := "no config file"
+	configFile := i18n.G("no config file")
 	if stat != uninstalledState {
 		configFile, dirs, err = s.getConfigAndDirsFromArgs()
 		if err != nil {
@@ -269,7 +269,7 @@ func (s *WatchdService) Status(ctx context.Context) (status string, err error) {
 	statStr.WriteString(i18n.G("Watched directories: "))
 
 	if len(dirs) == 0 {
-		statStr.WriteString("no configured directories")
+		statStr.WriteString(i18n.G("no configured directories"))
 	}
 
 	for _, dir := range dirs {
@@ -284,12 +284,12 @@ func (s *WatchdService) Status(ctx context.Context) (status string, err error) {
 func (s *WatchdService) getConfigAndDirsFromArgs() (string, []string, error) {
 	args, err := s.getServiceArgs()
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to get service args: %v", err)
+		return "", nil, fmt.Errorf(i18n.G("failed to get service args: %v"), err)
 	}
 
 	configFile, err := watchdhelpers.GetConfigFileFromArgs(args)
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to get config file from args: %v", err)
+		return "", nil, fmt.Errorf(i18n.G("failed to get config file from args: %v"), err)
 	}
 
 	return configFile, watchdhelpers.GetDirsFromConfigFile(configFile), nil
@@ -299,7 +299,7 @@ func (s *WatchdService) getConfigAndDirsFromArgs() (string, []string, error) {
 // automatically start in due time.
 func (s *WatchdService) Install(ctx context.Context) (err error) {
 	decorate.OnError(&err, i18n.G("failed to install service"))
-	log.Info(ctx, "Installing watcher service")
+	log.Info(ctx, i18n.G("Installing watcher service"))
 	if err := s.service.Install(); err != nil {
 		return err
 	}
@@ -317,11 +317,11 @@ func (s *WatchdService) Install(ctx context.Context) (err error) {
 // first.
 func (s *WatchdService) Uninstall(ctx context.Context) (err error) {
 	decorate.OnError(&err, i18n.G("failed to uninstall service"))
-	log.Info(ctx, "Uninstalling watcher service")
+	log.Info(ctx, i18n.G("Uninstalling watcher service"))
 
 	stat, err := s.service.Status()
 	if errors.Is(err, service.ErrNotInstalled) {
-		log.Info(ctx, "Service is not installed")
+		log.Info(ctx, i18n.G("Service is not installed"))
 		return nil
 	}
 
@@ -339,6 +339,6 @@ func (s *WatchdService) Uninstall(ctx context.Context) (err error) {
 func (s *WatchdService) Run(ctx context.Context) (err error) {
 	decorate.OnError(&err, i18n.G("failed to run service"))
 
-	log.Info(ctx, "Running watcher service")
+	log.Info(ctx, i18n.G("Running watcher service"))
 	return s.service.Run()
 }

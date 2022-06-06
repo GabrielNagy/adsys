@@ -96,7 +96,7 @@ func (w *Watcher) startWatch(ctx context.Context, dirs []string) error {
 	initError := make(chan error)
 	go func() {
 		if errWatching := w.watch(ctx, w.dirs, initError); errWatching != nil {
-			log.Warningf(ctx, "Watch failed: %v", errWatching)
+			log.Warningf(ctx, i18n.G("Watch failed: %v"), errWatching)
 		}
 	}()
 	return <-initError
@@ -129,11 +129,11 @@ func (w *Watcher) UpdateDirs(dirs []string) (err error) {
 	decorate.OnError(&err, i18n.G("can't update directories to watch"))
 	for _, dir := range dirs {
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
-			return fmt.Errorf(i18n.G("directory %v does not exist"), dir)
+			return fmt.Errorf(i18n.G("directory %q does not exist"), dir)
 		}
 	}
 
-	log.Debugf(w.parentCtx, "Updating directories to %v", dirs)
+	log.Debugf(w.parentCtx, i18n.G("Updating directories to %v"), dirs)
 
 	if err := w.stopWatch(w.parentCtx); err != nil {
 		return err
@@ -157,7 +157,7 @@ func (w *Watcher) watch(ctx context.Context, dirs []string, initError chan<- err
 	// Collect directories to watch.
 	for _, dir := range dirs {
 		if err := watchSubDirs(ctx, fsWatcher, dir); err != nil {
-			initError <- fmt.Errorf(i18n.G("failed to watch directory %s: %v"), dir, err)
+			initError <- fmt.Errorf(i18n.G("failed to watch directory %q: %v"), dir, err)
 		}
 	}
 
@@ -175,7 +175,7 @@ func (w *Watcher) watch(ctx context.Context, dirs []string, initError chan<- err
 			if !ok {
 				continue
 			}
-			log.Debugf(ctx, "Got event: %v", event)
+			log.Debugf(ctx, i18n.G("Got event: %v"), event)
 
 			// If the modified file is our own change, ignore it.
 			if strings.ToLower(filepath.Base(event.Name)) == gptFileName {
@@ -185,14 +185,14 @@ func (w *Watcher) watch(ctx context.Context, dirs []string, initError chan<- err
 			if event.Op&fsnotify.Create == fsnotify.Create {
 				fileInfo, err := os.Stat(event.Name)
 				if err != nil {
-					log.Warningf(ctx, "Failed to stat: %s", err)
+					log.Warningf(ctx, i18n.G("Failed to stat: %s"), err)
 					continue
 				}
 
 				// Add new detected files and directories to the watch list.
 				if fileInfo.IsDir() {
 					if err := watchSubDirs(ctx, fsWatcher, event.Name); err != nil {
-						log.Warningf(ctx, "Failed to watch: %s", err)
+						log.Warningf(ctx, i18n.G("Failed to watch: %s"), err)
 					}
 				} else if fileInfo.Mode().IsRegular() {
 					fsWatcher.Add(event.Name)
@@ -214,7 +214,7 @@ func (w *Watcher) watch(ctx context.Context, dirs []string, initError chan<- err
 			// Find and add matching root directory if not already present in the list to refresh.
 			rootDir, err := getRootDir(event.Name, dirs)
 			if err != nil {
-				log.Warningf(ctx, "%v", err)
+				log.Warning(ctx, err)
 				continue
 			}
 			var alreadyAdded bool
@@ -243,7 +243,7 @@ func (w *Watcher) watch(ctx context.Context, dirs []string, initError chan<- err
 
 		case err, ok := <-fsWatcher.Errors:
 			if ok {
-				log.Warningf(ctx, "Got event error: %v", err)
+				log.Warningf(ctx, i18n.G("Got event error: %v"), err)
 			}
 			continue
 
@@ -252,7 +252,7 @@ func (w *Watcher) watch(ctx context.Context, dirs []string, initError chan<- err
 			updateVersions(ctx, modifiedRootDirs)
 
 		case <-ctx.Done():
-			log.Infof(ctx, "Watcher stopped")
+			log.Infof(ctx, i18n.G("Watcher stopped"))
 			// Check if there was a timer in progress to not miss an update before exiting.
 			if refreshTimer.Stop() {
 				updateVersions(ctx, modifiedRootDirs)
@@ -265,13 +265,13 @@ func (w *Watcher) watch(ctx context.Context, dirs []string, initError chan<- err
 // watchSubDirs walks a given directory and adds all subdirectories to the watch list.
 func watchSubDirs(ctx context.Context, fsWatcher *fsnotify.Watcher, path string) (err error) {
 	decorate.OnError(&err, i18n.G("can't watch directory and children of %s"), path)
-	log.Debugf(ctx, "Watching %s and children", path)
+	log.Debugf(ctx, i18n.G("Watching %s and children"), path)
 
 	err = filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		log.Debugf(ctx, "Watching: %v", p)
+		log.Debugf(ctx, i18n.G("Watching: %v"), p)
 		return fsWatcher.Add(p)
 	})
 	return err
@@ -309,7 +309,7 @@ func updateVersions(ctx context.Context, modifiedRootDirs []string) {
 	for _, dir := range modifiedRootDirs {
 		gptIniPath := filepath.Join(dir, gptFileName)
 		if err := bumpVersion(ctx, gptIniPath); err != nil {
-			log.Warningf(ctx, "Failed to bump %s version: %s", gptIniPath, err)
+			log.Warningf(ctx, i18n.G("Failed to bump %s version: %s"), gptIniPath, err)
 		}
 	}
 }
@@ -317,13 +317,13 @@ func updateVersions(ctx context.Context, modifiedRootDirs []string) {
 // bumpVersion does the actual bumping of the version in the given GPT.ini file.
 func bumpVersion(ctx context.Context, path string) (err error) {
 	decorate.OnError(&err, i18n.G("can't bump version for %s"), path)
-	log.Infof(ctx, "Bumping version for %s", path)
+	log.Infof(ctx, i18n.G("Bumping version for %s"), path)
 
 	cfg, err := ini.Load(path)
 
 	// If the file doesn't exist, create it and initialize the key to be updated.
 	if err != nil {
-		log.Warningf(ctx, "error loading ini contents: %v, creating a new file", err)
+		log.Warningf(ctx, i18n.G("error loading ini contents: %v, creating a new file"), err)
 		cfg = ini.Empty()
 		cfg.Section("General").NewKey("Version", "0")
 	}
