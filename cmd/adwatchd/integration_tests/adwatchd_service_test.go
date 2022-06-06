@@ -17,9 +17,17 @@ import (
 )
 
 func TestServiceStateChange(t *testing.T) {
+	// Parallelization is not supported on Windows due to Service
+	// Control Manager reasons.
+	if runtime.GOOS != "windows" {
+		t.Parallel()
+	}
+
 	tests := map[string]struct {
 		sequence   []string
 		invalidDir bool
+
+		skipUnlessWindows bool
 
 		wantErrAt   []int
 		wantStopped bool
@@ -32,8 +40,8 @@ func TestServiceStateChange(t *testing.T) {
 		"install":             {sequence: []string{"install"}, wantErrAt: []int{0}},
 
 		// From started state
-		// TODO: this should error on windows but doesn't with systemd because of the auto-restart policy
-		// "start with a bad dir": {sequence: []string{"start"}, invalidDir: true, wantStopped: true},
+		// This should error on Windows but doesn't with systemd because of the auto-restart policy
+		"start with a bad dir": {sequence: []string{"start"}, invalidDir: true, wantStopped: true, skipUnlessWindows: true},
 		"start multiple times": {sequence: []string{"start", "start"}},
 		"start and stop":       {sequence: []string{"start", "stop"}},
 		"start and restart":    {sequence: []string{"start", "restart"}},
@@ -50,10 +58,9 @@ func TestServiceStateChange(t *testing.T) {
 		tc := tc
 		name := name
 		t.Run(name, func(t *testing.T) {
-			// Parallelization is not supported on Windows due to Service
-			// Control Manager reasons.
-			if runtime.GOOS != "windows" {
-				t.Parallel()
+			// Skip Windows-only tests if requested
+			if runtime.GOOS != "windows" && tc.skipUnlessWindows {
+				t.Skip()
 			}
 
 			var err error
