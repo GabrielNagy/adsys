@@ -16,9 +16,6 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-// TODO: revisit install and config?
-// TODO: create config file when installed interactively
-
 func TestServiceStateChange(t *testing.T) {
 	tests := map[string]struct {
 		sequence   []string
@@ -151,4 +148,30 @@ func TestUpdateGPT(t *testing.T) {
 	require.NoError(t, err, "Can't get GPT.ini version as an integer")
 
 	assert.Equal(t, 1, v, "GPT.ini version is not equal to the expected one")
+}
+
+func TestServiceStatusContainsCorrectDirs(t *testing.T) {
+	firstDir, secondDir := t.TempDir(), t.TempDir()
+	configPath := generateConfig(t, -1, firstDir, secondDir)
+
+	app := commands.New(commands.WithServiceName("adwatchd-test-service-status-contains-correct-dirs"))
+	t.Cleanup(func() {
+		uninstallService(t, configPath, app)
+	})
+
+	installService(t, configPath, app)
+
+	// Wait for service to be running
+	time.Sleep(time.Second)
+
+	want := fmt.Sprintf(`Service status: running
+
+Config file: %s
+Watched directories: 
+  - %s
+  - %s
+`, configPath, firstDir, secondDir)
+
+	// Get actual status
+	require.Equal(t, want, getStatus(t, app), "Service status doesn't match")
 }
