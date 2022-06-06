@@ -17,6 +17,7 @@ vendor/
 
 # Package artefacts
 obj-x86_64-linux-gnu/
+msi/Output
 
 # Various cruft to not consider by default
 *.log
