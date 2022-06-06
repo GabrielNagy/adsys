@@ -150,14 +150,14 @@ func (w *Watcher) watch(ctx context.Context, dirs []string, initError chan<- err
 
 	fsWatcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		initError <- err
+		initError <- fmt.Errorf(i18n.G("could not initialize fsnotify watcher: %v"), err)
 	}
 	defer fsWatcher.Close()
 
 	// Collect directories to watch.
 	for _, dir := range dirs {
 		if err := watchSubDirs(ctx, fsWatcher, dir); err != nil {
-			initError <- err
+			initError <- fmt.Errorf(i18n.G("failed to watch directory %s: %v"), dir, err)
 		}
 	}
 

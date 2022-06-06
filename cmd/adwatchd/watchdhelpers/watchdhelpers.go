@@ -85,6 +85,10 @@ func WriteConfig(confFile string, dirs []string, defaultConfFile string) error {
 
 // GetConfigFileFromArgs returns the path to the config file extracted from the
 // command line arguments.
+//
+// This is not an exhaustive implementation of "parsing" the command line and
+// only covers the cases used by the service installer, which should be good
+// enough for us.
 func GetConfigFileFromArgs(args string) (string, error) {
 	_, configFile, found := strings.Cut(args, "-c")
 	if !found {
@@ -94,9 +98,5 @@ func GetConfigFileFromArgs(args string) (string, error) {
 	// Remove trailing quotes and spaces (quotes are added if the path to the
 	// config file contains spaces)
 	configFile = strings.Trim(configFile, `" `)
-
-	if _, err := os.Stat(configFile); errors.Is(err, os.ErrNotExist) {
-		return "", fmt.Errorf(i18n.G("config file %q does not exist on the filesystem"), configFile)
-	}
 	return configFile, nil
 }
