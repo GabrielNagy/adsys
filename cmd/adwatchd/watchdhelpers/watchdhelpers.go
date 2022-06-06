@@ -49,7 +49,7 @@ func FilterAbsentDirs(dirs []string) []string {
 // directories that are passed in actually exist. It receives a config file and
 // a slice of absolute sorted paths.
 func WriteConfig(confFile string, dirs []string, defaultConfFile string) error {
-	if len(dirs) == 1 && dirs[0] == "" {
+	if len(dirs) == 0 {
 		return fmt.Errorf(i18n.G("needs at least one directory to watch"))
 	}
 
