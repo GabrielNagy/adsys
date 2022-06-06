@@ -169,7 +169,11 @@ This can be done via the Services UI or by running: adwatchd service uninstall`)
 }
 
 func defaultConfigPath() string {
-	return filepath.Join("adwatchd.yml")
+	binPath, err := os.Executable()
+	if err != nil {
+		log.Warningf(context.Background(), i18n.G("failed to get executable path, using relative path for default config: %v"), err)
+	}
+	return filepath.Join(filepath.Dir(binPath), "adwatchd.yml")
 }
 
 // Run executes the app.
