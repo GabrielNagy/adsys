@@ -97,7 +97,11 @@ func TestServiceStateChange(t *testing.T) {
 	}
 }
 func TestInstall(t *testing.T) {
-	t.Parallel()
+	// Parallelization is not supported on Windows due to Service
+	// Control Manager reasons.
+	if runtime.GOOS != "windows" {
+		t.Parallel()
+	}
 
 	watchedDir := t.TempDir()
 
@@ -113,7 +117,11 @@ func TestInstall(t *testing.T) {
 }
 
 func TestUpdateGPT(t *testing.T) {
-	t.Parallel()
+	// Parallelization is not supported on Windows due to Service
+	// Control Manager reasons.
+	if runtime.GOOS != "windows" {
+		t.Parallel()
+	}
 
 	watchedDir := t.TempDir()
 	configPath := generateConfig(t, -1, watchedDir)
@@ -133,7 +141,6 @@ func TestUpdateGPT(t *testing.T) {
 	require.NoError(t, err, "Can't write to file")
 
 	// Give time for the writes to be picked up
-	// syscall.Sync()
 	time.Sleep(time.Millisecond * 100)
 
 	// Stop the service to trigger the GPT update
@@ -151,6 +158,12 @@ func TestUpdateGPT(t *testing.T) {
 }
 
 func TestServiceStatusContainsCorrectDirs(t *testing.T) {
+	// Implementation is Windows-specific and there's really no point in
+	// implementing a Linux variant as well.
+	if runtime.GOOS != "windows" {
+		t.Skip("This test is Windows-only")
+	}
+
 	firstDir, secondDir := t.TempDir(), t.TempDir()
 	configPath := generateConfig(t, -1, firstDir, secondDir)
 

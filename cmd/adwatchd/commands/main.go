@@ -60,7 +60,8 @@ func New(opts ...option) *App {
 		Long:  i18n.G(`Watch directories for changes and bump the relevant GPT.ini versions.`),
 		Args:  cobra.NoArgs,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			// Command parsing has been successful. Returns runtime (or configuration) error now and so, don't print usage.
+			// Command parsing has been successful. Returns runtime (or
+			// configuration) error now and so, don't print usage.
 			cmd.SilenceUsage = true
 			err := config.Init("adwatchd", a.rootCmd, a.viper, func(refreshed bool) error {
 				var newConfig watchdhelpers.AppConfig
