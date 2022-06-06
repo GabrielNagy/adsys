@@ -165,6 +165,7 @@ This can be done via the Services UI or by running: adwatchd service uninstall`)
 	// Install subcommands
 	a.installRun()
 	a.installService()
+	a.installVersion()
 
 	return &a
 }
