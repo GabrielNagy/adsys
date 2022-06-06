@@ -14,7 +14,6 @@ AppVersion={#AppVersion}
 AppPublisher=Ubuntu
 AppPublisherURL=https://www.ubuntu.com/
 AppCopyright=Copyright (C) 2022 Canonical Ltd.
-VersionInfoVersion={#AppVersion}
 WizardStyle=modern
 DefaultDirName={autopf}\Ubuntu\AD Watch Daemon
 ; Since no icons will be created in "{group}", we don't need the wizard

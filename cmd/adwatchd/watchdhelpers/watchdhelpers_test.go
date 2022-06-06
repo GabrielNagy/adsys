@@ -15,8 +15,6 @@ import (
 var update bool
 
 func TestGetConfigFileFromArgs(t *testing.T) {
-	t.Parallel()
-
 	tests := map[string]struct {
 		args string
 
@@ -32,8 +30,6 @@ func TestGetConfigFileFromArgs(t *testing.T) {
 		tc := tc
 		name := name
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
 			got, err := watchdhelpers.GetConfigFileFromArgs(tc.args)
 			if tc.wantErr {
 				require.Error(t, err)
@@ -100,8 +96,6 @@ func TestGetDirsFromConfigFile(t *testing.T) {
 }
 
 func TestFilterAbsentDirs(t *testing.T) {
-	t.Parallel()
-
 	tests := map[string]struct {
 		inputDirs    []string
 		existingDirs []string
