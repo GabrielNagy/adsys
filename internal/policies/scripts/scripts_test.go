@@ -79,7 +79,7 @@ func TestApplyPolicy(t *testing.T) {
 		// user cases -> setuid/setgid to current user in tests
 		"one script": {entries: defaultSingleScript},
 		"one directory, multiple scripts in order": {entries: []entry.Entry{{Key: "s", Value: "script3.sh\nscript1.sh\nscript2.sh"}}},
-		"multiple directories:": {entries: []entry.Entry{
+		"multiple directories": {entries: []entry.Entry{
 			{Key: "s", Value: "script3.sh\nscript1.sh\nscript2.sh"},
 			{Key: "e", Value: "script93.sh\nscript91.sh\nscript92.sh"}}},
 		"same script is used multiple times": {entries: []entry.Entry{{Key: "s", Value: "script3.sh\nscript1.sh\nscript3.sh"}}},

@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -200,6 +201,9 @@ func TestAdsysGPOList(t *testing.T) {
 			if tc.url == "" {
 				tc.url = "ldap://ldap_url"
 			}
+
+			// Replace non-Windows friendly characters in the test name
+			name = strings.Replace(name, ":", "", -1)
 
 			// Ticket creation for mock
 			if tc.krb5ccNameState != "unset" {

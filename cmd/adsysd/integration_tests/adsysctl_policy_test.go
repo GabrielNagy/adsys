@@ -912,8 +912,8 @@ func TestPolicyUpdate(t *testing.T) {
 			// in the process for authorization check. Just make it generic.
 			if _, err := os.Stat(filepath.Join(adsysDir, "run", "users", currentUID)); err == nil {
 				require.NoError(t, os.Rename(filepath.Join(adsysDir, "run", "users", currentUID),
-					filepath.Join(adsysDir, "run", "users", "<CURRENT_UID>")),
-					"Setup: can't rename current user directory to generic <CURRENT_UID>")
+					filepath.Join(adsysDir, "run", "users", "CURRENT_UID")),
+					"Setup: can't rename current user directory to generic CURRENT_UID")
 			}
 
 			testutils.CompareTreesWithFiltering(t, filepath.Join(adsysDir, "run", "users"), filepath.Join("testdata", "PolicyUpdate", "golden", name, "run", "users"), update)
