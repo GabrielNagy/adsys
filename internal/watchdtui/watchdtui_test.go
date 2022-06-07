@@ -388,8 +388,9 @@ func TestInteractiveInput(t *testing.T) {
 }
 
 func TestInteractiveInstall(t *testing.T) {
-	if os.Getenv("ADWATCHD_RUN_INTEGRATION_TESTS") == "" {
-		t.Skip("Integration tests skipped as requested")
+	if os.Getenv("ADSYS_SKIP_INTEGRATION_TESTS") != "" || os.Getenv("ADSYS_SKIP_SUDO_TESTS") != "" {
+		fmt.Println("Integration tests skipped as requested")
+		return
 	}
 
 	svc, err := watchdservice.New(context.Background())
