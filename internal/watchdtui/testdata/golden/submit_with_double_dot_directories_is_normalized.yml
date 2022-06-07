@@ -1,3 +1,4 @@
 verbose: 0
+force: false
 dirs:
 - #ABSPATH#/foo/baz
