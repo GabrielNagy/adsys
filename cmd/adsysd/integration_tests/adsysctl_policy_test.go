@@ -128,6 +128,9 @@ func TestPolicyApplied(t *testing.T) {
 			// Reset color that we disable on client when we request --no-color
 			color.NoColor = false
 
+			// Replace non-Windows friendly characters in the test name
+			name = strings.Replace(name, `\`, "_", -1)
+
 			dir := t.TempDir()
 			dstDir := filepath.Join(dir, "cache", "policies")
 			err := os.MkdirAll(dstDir, 0700)
@@ -783,6 +786,9 @@ func TestPolicyUpdate(t *testing.T) {
 			systemAnswer(t, tc.systemAnswer)
 
 			adsysDir := t.TempDir()
+
+			// Replace non-Windows friendly characters in the test name
+			name = strings.Replace(name, `\`, "_", -1)
 
 			// Prepare initial state, renaming HOST file to current host
 			if tc.initState != "" {
