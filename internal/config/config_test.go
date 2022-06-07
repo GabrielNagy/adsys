@@ -161,9 +161,11 @@ func TestInit(t *testing.T) {
 
 		// Error cases
 		"Error on no verbose flag set before Init is call": {noVerboseFlag: true, wantErr: true},
-		"Error on invalid configuration file":              {configFileContent: "invalidcontent", want: "filecontentvalue", wantErr: true},
 		"Error on callback returning error on first call":  {errFromCallbackOn: 1, wantErr: true},
-		"Error on config flag points to unexisting path":   {withConfigFlagSet: "DELETED.yaml", wantErr: true},
+
+		// Configuration file not found
+		"Config flag points to unexisting path": {withConfigFlagSet: "DELETED.yaml", wantCallbackCalled: 1},
+		"Invalid configuration file":            {configFileContent: "invalidcontent", wantCallbackCalled: 1},
 	}
 
 	for name, tc := range tests {
