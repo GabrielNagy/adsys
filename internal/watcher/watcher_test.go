@@ -138,9 +138,7 @@ func TestWatchDirectory(t *testing.T) {
 				return
 			}
 			require.NoError(t, err, "Can't start watcher")
-			defer func() {
-				err = w.Stop(mockService{})
-			}()
+			defer w.Stop(mockService{})
 
 			// Remove some files and directories
 			for _, path := range tc.filesToRemove {
@@ -220,9 +218,7 @@ func TestRefreshGracePeriod(t *testing.T) {
 	// Start it
 	err = w.Start(mockService{})
 	require.NoError(t, err, "Setup: Can't start watcher")
-	defer func() {
-		err = w.Stop(mockService{})
-	}()
+	defer w.Stop(mockService{})
 
 	// Modify first file
 	err = os.WriteFile(filepath.Join(temp, dir, "alreadyexists"), []byte("new content"), 0600)
@@ -275,9 +271,7 @@ func TestUpdateDirs(t *testing.T) {
 	// Start it
 	err = w.Start(mockService{})
 	require.NoError(t, err, "Setup: Can't start watcher")
-	defer func() {
-		err = w.Stop(mockService{})
-	}()
+	defer w.Stop(mockService{})
 
 	// Check GPT versions on the 3 dirs
 	assertGPTVersionEquals(t, destKeep, 2)
@@ -333,9 +327,7 @@ func TestUpdateDirsFailing(t *testing.T) {
 	// Start it
 	err = w.Start(mockService{})
 	require.NoError(t, err, "Setup: Can't start watcher")
-	defer func() {
-		err = w.Stop(mockService{})
-	}()
+	defer w.Stop(mockService{})
 
 	// Check GPT versions on the 2 dirs
 	assertGPTVersionEquals(t, destKeep, 2)

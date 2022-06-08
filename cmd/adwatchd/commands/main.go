@@ -11,8 +11,6 @@ import (
 	"github.com/kardianos/service"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"golang.org/x/exp/slices"
-
 	"github.com/ubuntu/adsys/cmd/adwatchd/watchdhelpers"
 	"github.com/ubuntu/adsys/internal/cmdhandler"
 	"github.com/ubuntu/adsys/internal/config"
@@ -20,6 +18,7 @@ import (
 	"github.com/ubuntu/adsys/internal/i18n"
 	"github.com/ubuntu/adsys/internal/watchdservice"
 	"github.com/ubuntu/adsys/internal/watchdtui"
+	"golang.org/x/exp/slices"
 )
 
 // App encapsulates commands and options of the daemon, which can be controlled by env variables and config files.
