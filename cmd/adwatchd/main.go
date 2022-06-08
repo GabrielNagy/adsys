@@ -8,8 +8,8 @@ import (
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/ubuntu/adsys/cmd/adwatchd/commands"
 
+	"github.com/ubuntu/adsys/cmd/adwatchd/commands"
 	"github.com/ubuntu/adsys/internal/consts"
 	"github.com/ubuntu/adsys/internal/i18n"
 )

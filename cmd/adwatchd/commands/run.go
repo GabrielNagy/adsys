@@ -13,7 +13,6 @@ import (
 )
 
 func (a *App) installRun() {
-
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: i18n.G("Starts the directory watch loop"),

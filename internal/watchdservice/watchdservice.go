@@ -224,8 +224,8 @@ func (s *WatchdService) Restart(ctx context.Context) (err error) {
 	return nil
 }
 
-// TODO show a warning if the installed service is in a different path than the adwatchd being run
 // Status provides a status of the watcher service in a pretty format.
+// TODO show a warning if the installed service is in a different path than the adwatchd being run.
 func (s *WatchdService) Status(ctx context.Context) (status string, err error) {
 	decorate.OnError(&err, i18n.G("failed to retrieve status for service"))
 	log.Debug(ctx, i18n.G("Getting status from service"))

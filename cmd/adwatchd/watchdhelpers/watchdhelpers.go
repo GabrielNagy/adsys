@@ -27,7 +27,7 @@ func GetDirsFromConfigFile(configFile string) []string {
 		return dirs
 	}
 	cfg := AppConfig{}
-	if err := yaml.Unmarshal([]byte(config), &cfg); err == nil {
+	if err := yaml.Unmarshal(config, &cfg); err == nil {
 		dirs = cfg.Dirs
 	}
 	return dirs

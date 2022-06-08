@@ -99,7 +99,6 @@ func TestServiceStateChange(t *testing.T) {
 					require.Contains(t, out, "stopped", "Service should be stopped")
 				}
 			}
-
 		})
 	}
 }
