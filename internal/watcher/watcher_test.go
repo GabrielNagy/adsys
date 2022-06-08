@@ -138,7 +138,9 @@ func TestWatchDirectory(t *testing.T) {
 				return
 			}
 			require.NoError(t, err, "Can't start watcher")
-			defer w.Stop(mockService{})
+			defer func() {
+				err = w.Stop(mockService{})
+			}()
 
 			// Remove some files and directories
 			for _, path := range tc.filesToRemove {
@@ -162,7 +164,7 @@ func TestWatchDirectory(t *testing.T) {
 						require.NoError(t, err, "Can't read file")
 						d = append(data, []byte("\n;comment string")...)
 					}
-					err := os.WriteFile(filepath.Join(temp, path), d, 0644)
+					err := os.WriteFile(filepath.Join(temp, path), d, 0600)
 					require.NoError(t, err, "Can't update file")
 					continue
 				}
@@ -171,12 +173,12 @@ func TestWatchDirectory(t *testing.T) {
 				// we have intermediate directories: create them if needed
 				if slash > -1 {
 					dir := path[:slash]
-					err := os.MkdirAll(filepath.Join(temp, dir), 0755)
+					err := os.MkdirAll(filepath.Join(temp, dir), 0750)
 					require.NoError(t, err, "Setup: Can't create directory")
 				}
 				// this is the file (last element, not empty)
 				if slash == -1 || slash != len(path)-1 {
-					err := os.WriteFile(filepath.Join(temp, path), []byte("new content"), 0644)
+					err := os.WriteFile(filepath.Join(temp, path), []byte("new content"), 0600)
 					require.NoError(t, err, "Setup: Can't update file")
 				}
 			}
@@ -218,10 +220,12 @@ func TestRefreshGracePeriod(t *testing.T) {
 	// Start it
 	err = w.Start(mockService{})
 	require.NoError(t, err, "Setup: Can't start watcher")
-	defer w.Stop(mockService{})
+	defer func() {
+		err = w.Stop(mockService{})
+	}()
 
 	// Modify first file
-	err = os.WriteFile(filepath.Join(temp, dir, "alreadyexists"), []byte("new content"), 0644)
+	err = os.WriteFile(filepath.Join(temp, dir, "alreadyexists"), []byte("new content"), 0600)
 	require.NoError(t, err, "Setup: Can't update file")
 
 	waitForWrites(t)
@@ -233,7 +237,7 @@ func TestRefreshGracePeriod(t *testing.T) {
 	assertGPTVersionEquals(t, dest, 2)
 
 	// Modify second file
-	err = os.WriteFile(filepath.Join(temp, dir, "alreadyexistsDir", "alreadyexists"), []byte("new content"), 0644)
+	err = os.WriteFile(filepath.Join(temp, dir, "alreadyexistsDir", "alreadyexists"), []byte("new content"), 0600)
 	require.NoError(t, err, "Setup: Can't update file")
 
 	waitForWrites(t)
@@ -271,7 +275,9 @@ func TestUpdateDirs(t *testing.T) {
 	// Start it
 	err = w.Start(mockService{})
 	require.NoError(t, err, "Setup: Can't start watcher")
-	defer w.Stop(mockService{})
+	defer func() {
+		err = w.Stop(mockService{})
+	}()
 
 	// Check GPT versions on the 3 dirs
 	assertGPTVersionEquals(t, destKeep, 2)
@@ -327,7 +333,9 @@ func TestUpdateDirsFailing(t *testing.T) {
 	// Start it
 	err = w.Start(mockService{})
 	require.NoError(t, err, "Setup: Can't start watcher")
-	defer w.Stop(mockService{})
+	defer func() {
+		err = w.Stop(mockService{})
+	}()
 
 	// Check GPT versions on the 2 dirs
 	assertGPTVersionEquals(t, destKeep, 2)
@@ -426,7 +434,7 @@ func writeToFiles(t *testing.T, files []string) {
 	t.Helper()
 
 	for _, file := range files {
-		err := os.WriteFile(file, []byte("new content"), 0644)
+		err := os.WriteFile(file, []byte("new content"), 0600)
 		require.NoError(t, err, "Can't write to file")
 	}
 	waitForWrites(t)
