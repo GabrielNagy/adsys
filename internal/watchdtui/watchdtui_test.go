@@ -505,6 +505,9 @@ func parseOutput(t *testing.T, out string) string {
 	// Normalize backslashes to slashes
 	out = strings.Replace(out, "\\", "/", -1)
 
+	// Strip carriage returns
+	out = strings.Replace(out, "\r", "/", -1)
+
 	// Replace cwd with a deterministic placeholder
 	out = strings.Replace(out, cwd, "#ABSPATH#", -1)
 	return out
