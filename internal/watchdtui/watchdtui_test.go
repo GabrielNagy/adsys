@@ -28,8 +28,6 @@ var (
 )
 
 func TestInteractiveInput(t *testing.T) {
-	t.Parallel()
-
 	// Simulate a color terminal
 	lipgloss.SetColorProfile(termenv.ANSI256)
 
