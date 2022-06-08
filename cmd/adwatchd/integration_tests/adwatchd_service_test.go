@@ -144,7 +144,7 @@ func TestUpdateGPT(t *testing.T) {
 	time.Sleep(time.Second)
 
 	// Write to some file
-	err := os.WriteFile(filepath.Join(watchedDir, "new_file"), []byte("new content"), 0644)
+	err := os.WriteFile(filepath.Join(watchedDir, "new_file"), []byte("new content"), 0600)
 	require.NoError(t, err, "Can't write to file")
 
 	// Give time for the writes to be picked up

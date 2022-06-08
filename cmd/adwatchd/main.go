@@ -45,7 +45,9 @@ func installSignalHandler(a *commands.App) func() {
 		for {
 			switch v, ok := <-c; v {
 			case syscall.SIGINT, syscall.SIGTERM:
-				a.Quit(syscall.SIGINT)
+				if err := a.Quit(syscall.SIGINT); err != nil {
+					log.Fatalf("failed to quit: %v", err)
+				}
 				return
 			default:
 				// channel was closed: we exited
