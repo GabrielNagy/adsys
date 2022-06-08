@@ -54,6 +54,8 @@ jobs:
           go-version: ${{ env.goversion }}
       # We add a new user and execute under it for file permissions to be taken into account
       # as root can write in RO directories.
+      - name: Replace default go symlink
+        run: cp -f `which go` /usr/bin/go
       - name: Install dependencies
         run: |
           sudo DEBIAN_FRONTEND=noninteractive apt update
