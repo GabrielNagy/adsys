@@ -223,7 +223,7 @@ func (a *App) Reset() {
 // Quit gracefully exits the app. Shouldn't be in general necessary apart for
 // integration tests where we might need to close the app manually.
 func (a *App) Quit(sig syscall.Signal) error {
-	a.waitReady()
+	a.WaitReady()
 	if !service.Interactive() {
 		return fmt.Errorf(i18n.G("not running in interactive mode"))
 	}
@@ -248,8 +248,8 @@ func WithServiceName(name string) func(o *options) {
 	}
 }
 
-// waitReady signals when the daemon is ready
+// WaitReady signals when the daemon is ready
 // Note: we need to use a pointer to not copy the App object before the daemon is ready, and thus, creates a data race.
-func (a *App) waitReady() {
+func (a *App) WaitReady() {
 	<-a.ready
 }
