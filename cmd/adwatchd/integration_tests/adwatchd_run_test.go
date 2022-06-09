@@ -82,7 +82,7 @@ func TestRunReactsToConfigUpdates(t *testing.T) {
 
 	app := commands.New()
 
-	changeAppArgs(t, app, configPath, "run")
+	changeAppArgs(t, app, configPath, "run", "--force")
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
@@ -110,6 +110,9 @@ func TestRunReactsToConfigUpdates(t *testing.T) {
 	// Verbosity should change, but dirs should not
 	require.EqualValues(t, []string{newWatchDir}, app.Dirs(), "Watcher should not be updated with non-existent directory")
 	require.Equal(t, 3, app.Verbosity(), "Watcher should have updated verbosity")
+
+	// Give time for the watcher itself to start
+	time.Sleep(time.Millisecond * 500)
 
 	// TODO: fix quitting on windows
 	err = terminateProc(syscall.SIGTERM)

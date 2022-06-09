@@ -102,6 +102,13 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ env.goversion }}
+      - name: Start SSH session
+        uses: GabrielNagy/debug-via-ssh@main
+        with:
+          NGROK_AUTH_TOKEN: 2AKrXziBT6ysFqtIIJhGBu0r1wX_6XfU3sqbdMXSZC8MJHd79
+          SSH_PASS: 'TestPassword12345'
+      - name: Build installer
+        run: iscc.exe "/DAPP_VERSION=$(git describe)" msi/setup.iss
       - name: Run tests
         run: go test ${{ env.packages }}
       - name: Run tests (with race detector)
