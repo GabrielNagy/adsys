@@ -194,7 +194,6 @@ func (s *WatchdService) waitForStatus(ctx context.Context, status service.Status
 				continue
 			}
 			gotStatus = true
-			break
 		}
 	}
 	return nil
