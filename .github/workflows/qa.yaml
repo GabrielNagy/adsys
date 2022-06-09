@@ -98,17 +98,25 @@ jobs:
       packages: ./internal/loghooks ./internal/watchdservice ./internal/watchdtui ./internal/watcher ./cmd/adwatchd/watchdhelpers ./cmd/adwatchd/integration_tests
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: Setup go
         uses: actions/setup-go@v2
         with:
           go-version: ${{ env.goversion }}
-      - name: Start SSH session
-        uses: GabrielNagy/debug-via-ssh@main
-        with:
-          NGROK_AUTH_TOKEN: 2AKrXziBT6ysFqtIIJhGBu0r1wX_6XfU3sqbdMXSZC8MJHd79
-          SSH_PASS: 'TestPassword12345'
       - name: Build installer
-        run: iscc.exe "/DAPP_VERSION=$(git describe)" msi/setup.iss
+        run: |
+          export GOFLAGS=-ldflags=-X=github.com/ubuntu/adsys/internal/consts.Version=$(git describe)
+          INSTALLER_VERSION=$(git describe | tr '-' '.' | cut -d. -f-4)
+
+          go build ./cmd/adwatchd
+          iscc.exe //DAPP_VERSION=$INSTALLER_VERSION msi/setup.iss
+        shell: bash
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: adwatchd_setup
+          path: msi/Output/adwatchd_setup.exe
       - name: Run tests
         run: go test ${{ env.packages }}
       - name: Run tests (with race detector)
