@@ -77,7 +77,7 @@ jobs:
 
           # Combine coverage files, and filter out test utilities and generated files
           echo "mode: set" > /tmp/coverage.txt
-          grep -v -e "mode: set" -e "testutils" -e "pb.go:" /tmp/coverage.out /tmp/coverage.sudo.out > /tmp/coverage.combined.out
+          grep -hv -e "mode: set" -e "testutils" -e "pb.go:" /tmp/coverage.out /tmp/coverage.sudo.out > /tmp/coverage.combined.out
       - name: Run tests (with race detector)
         run: |
           ADSYS_SKIP_SUDO_TESTS=1 go test -race ./...
