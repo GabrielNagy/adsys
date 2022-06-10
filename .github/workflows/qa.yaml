@@ -107,6 +107,9 @@ jobs:
       - name: Build installer
         run: |
           export GOFLAGS=-ldflags=-X=github.com/ubuntu/adsys/internal/consts.Version=$(git describe)
+
+          # transforms git describe output from X.Y.Z-P-gSHA to X.Y.Z.P for untagged commits
+          # no-op on tagged commits
           INSTALLER_VERSION=$(git describe | tr '-' '.' | cut -d. -f-4)
 
           go build ./cmd/adwatchd
@@ -119,8 +122,13 @@ jobs:
           path: msi/Output/adwatchd_setup.exe
       - name: Run tests
         run: go test ${{ env.packages }}
-      - name: Run tests (with race detector)
-        run: go test -race ${{ env.packages }}
+      # - name: Run tests (with race detector)
+      #   run: go test -race ${{ env.packages }}
+      - name: Draft release and publish installer artifact
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: msi/Output/adwatchd_setup.exe
 
   generators:
     name: Generated files are up to date
