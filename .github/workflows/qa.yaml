@@ -108,11 +108,13 @@ jobs:
           go-version: ${{ env.goversion }}
       - name: Build installer
         run: |
-          export GOFLAGS=-ldflags=-X=github.com/ubuntu/adsys/internal/consts.Version=$(git describe)
+          tag=$(git describe --tags)
+          export GOFLAGS=-ldflags=-X=github.com/ubuntu/adsys/internal/consts.Version=$tag
 
-          # transforms git describe output from X.Y.Z-P-gSHA to X.Y.Z.P for untagged commits
-          # no-op on tagged commits
-          INSTALLER_VERSION=$(git describe | tr '-' '.' | cut -d. -f-4)
+          # Transforms git describe output:
+          # - from X.Y.Z-P-gSHA to X.Y.Z.P for untagged commits
+          # - from vX.Y.Z to X.Y.Z for tagged commits
+          INSTALLER_VERSION=$(echo $tag | tr -d v | tr '-' '.' | cut -d. -f-4)
 
           go build ./cmd/adwatchd
           iscc.exe //DAPP_VERSION=$INSTALLER_VERSION msi/setup.iss
