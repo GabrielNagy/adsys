@@ -125,12 +125,14 @@ jobs:
           name: adwatchd_setup
           path: msi/Output/adwatchd_setup.exe
       - name: Run tests
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         run: go test ${{ env.packages }}
-      # - name: Run tests (with race detector)
-      #   run: go test -race ${{ env.packages }}
+      - name: Run tests (with race detector)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        run: go test -race ${{ env.packages }}
       - name: Draft release and publish installer artifact
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
         with:
           files: msi/Output/adwatchd_setup.exe
 
