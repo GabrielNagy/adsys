@@ -2,7 +2,9 @@ name: QA
 on:
   push:
     branches:
-    - windows-daemon
+      - windows-daemon
+    tags:
+      - '*'
   pull_request:
 
 env:
