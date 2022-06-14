@@ -51,7 +51,7 @@ func TestRunWithForceWhenServiceIsRunning(t *testing.T) {
 	// Give time for the watcher itself to start
 	time.Sleep(time.Millisecond * 100)
 
-	err = terminateProc(syscall.SIGTERM)
+	err = app.Quit(syscall.SIGTERM)
 	require.NoError(t, err, "Quitting should succeed")
 	select {
 	case <-done:
@@ -115,7 +115,7 @@ func TestRunReactsToConfigUpdates(t *testing.T) {
 	time.Sleep(time.Millisecond * 500)
 
 	// TODO: fix quitting on windows
-	err = terminateProc(syscall.SIGTERM)
+	err = app.Quit(syscall.SIGTERM)
 	require.NoError(t, err, "Quitting should succeed")
 	select {
 	case <-done:
@@ -143,7 +143,7 @@ func TestRunCanQuitWithCtrlC(t *testing.T) {
 	// Give time for the watcher itself to start
 	time.Sleep(time.Millisecond * 100)
 
-	err = terminateProc(syscall.SIGTERM)
+	err = app.Quit(syscall.SIGTERM)
 	require.NoError(t, err, "Quitting should succeed")
 
 	select {
