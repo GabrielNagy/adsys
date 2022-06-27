@@ -263,7 +263,7 @@ func (s *WatchdService) Status(ctx context.Context) (status string, err error) {
 	var pathMismatch bool
 
 	if stat != uninstalledState {
-		svcInfo, err = s.args(ctx)
+		svcInfo, err = s.Args(ctx)
 		// Return just the status if we couldn't get the service info.
 		if err != nil {
 			log.Warning(ctx, err)
@@ -275,27 +275,27 @@ func (s *WatchdService) Status(ctx context.Context) (status string, err error) {
 			log.Warningf(ctx, i18n.G("Failed to get current executable path: %v"), err)
 		}
 
-		if exePath != svcInfo.binPath && svcInfo.binPath != "" {
+		if exePath != svcInfo.BinPath && svcInfo.BinPath != "" {
 			pathMismatch = true
 		}
 	}
 
 	statStr.WriteString("\n\n")
-	statStr.WriteString(fmt.Sprintf(i18n.G("Config file: %s\n"), svcInfo.configFile))
+	statStr.WriteString(fmt.Sprintf(i18n.G("Config file: %s\n"), svcInfo.ConfigFile))
 	statStr.WriteString(i18n.G("Watched directories: "))
 
-	if len(svcInfo.dirs) == 0 {
+	if len(svcInfo.Dirs) == 0 {
 		statStr.WriteString(i18n.G("no configured directories"))
 	}
 
-	for _, dir := range svcInfo.dirs {
+	for _, dir := range svcInfo.Dirs {
 		statStr.WriteString(fmt.Sprintf(i18n.G("\n  - %s"), dir))
 	}
 
 	if pathMismatch {
 		log.Warningf(ctx, i18n.G(`Service binary path does not match executable path
 Service binary path: %s
-Current executable path: %s`), svcInfo.binPath, exePath)
+Current executable path: %s`), svcInfo.BinPath, exePath)
 	}
 	status = statStr.String()
 
@@ -304,29 +304,29 @@ Current executable path: %s`), svcInfo.binPath, exePath)
 
 // serviceInfo represents the information gathered from the service arguments.
 type serviceInfo struct {
-	configFile string
-	dirs       []string
-	binPath    string
+	ConfigFile string
+	Dirs       []string
+	BinPath    string
 }
 
-// args returns the service configuration extracted from the
+// Args returns the service configuration extracted from the
 // service arguments.
-func (s *WatchdService) args(ctx context.Context) (svcInfo serviceInfo, err error) {
+func (s *WatchdService) Args(ctx context.Context) (svcInfo serviceInfo, err error) {
 	defer decorate.OnError(&err, i18n.G("failed to get service info from arguments"))
 
-	svcInfo = serviceInfo{configFile: i18n.G("no config file")}
+	svcInfo = serviceInfo{}
 	binPath, args, err := s.serviceArgs()
 	if err != nil {
 		return svcInfo, err
 	}
-	svcInfo.binPath = binPath
+	svcInfo.BinPath = binPath
 
 	configFile, err := watchdconfig.ConfigFileFromArgs(args)
 	if err != nil {
 		return svcInfo, err
 	}
-	svcInfo.configFile = configFile
-	svcInfo.dirs = watchdconfig.DirsFromConfigFile(ctx, configFile)
+	svcInfo.ConfigFile = configFile
+	svcInfo.Dirs = watchdconfig.DirsFromConfigFile(ctx, configFile)
 
 	return svcInfo, nil
 }

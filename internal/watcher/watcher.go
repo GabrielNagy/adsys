@@ -81,10 +81,9 @@ func New(ctx context.Context, initialDirs []string, opts ...option) (*Watcher, e
 				// Start from service doesn't pass a context explicitly
 				parentCtx := c.ctx
 				if parentCtx == nil {
-					ctx, cancel = context.WithCancel(ctx)
-				} else {
-					ctx, cancel = context.WithCancel(*parentCtx)
+					parentCtx = &ctx
 				}
+				ctx, cancel = context.WithCancel(*parentCtx)
 
 				// Start from service doesn't pass dirs explicitly
 				dirs := c.dirs
@@ -356,7 +355,7 @@ func bumpVersion(ctx context.Context, path string) (err error) {
 	log.Infof(ctx, i18n.G("Bumping version for %s"), path)
 
 	// Windows-generated files do not have spaces around the equals sign.
-	if !ini.PrettyFormat {
+	if ini.PrettyFormat {
 		ini.PrettyFormat = false
 	}
 	cfg, err := ini.Load(path)
