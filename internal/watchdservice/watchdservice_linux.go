@@ -9,7 +9,10 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-// a(sasbttttuii).
+// execStart represents the ExecStart option of a systemd service. It maps to
+// the D-Bus property org.freedesktop.systemd1.Service.ExecStart.
+// Type signature: a(sasbttttuii)
+// Refer to the org.freedesktop.systemd1(5) man page for more information.
 type execStart struct {
 	BinPath string   // the binary path to execute
 	Args    []string // an array with all arguments to pass to the executed command, starting with argument 0

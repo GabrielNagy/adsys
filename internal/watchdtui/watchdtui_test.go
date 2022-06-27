@@ -7,8 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -492,17 +494,20 @@ func TestInteractiveUpdate(t *testing.T) {
 			absPrevDirs := make([]string, len(tc.prevDirs))
 			for i, dir := range tc.prevDirs {
 				absPrevDirs[i] = filepath.Join(tmpdir, dir)
-				os.MkdirAll(absPrevDirs[i], 0750)
+				err := os.MkdirAll(absPrevDirs[i], 0750)
+				require.NoError(t, err, "Cannot create previous directories")
 			}
 
 			absDirsToAdd := make([]string, len(tc.dirsToAdd))
 			for i, dir := range tc.dirsToAdd {
 				absDirsToAdd[i] = filepath.Join(tmpdir, dir)
-				os.MkdirAll(absDirsToAdd[i], 0750)
+				err := os.MkdirAll(absDirsToAdd[i], 0750)
+				require.NoError(t, err, "Cannot create new directories")
 			}
 
 			prevConfigPath := filepath.Join(tmpdir, "prevconfig.yaml")
-			watchdconfig.WriteConfig(prevConfigPath, absPrevDirs)
+			err := watchdconfig.WriteConfig(prevConfigPath, absPrevDirs)
+			require.NoError(t, err, "Cannot write previous config file")
 
 			svc, err := watchdservice.New(context.Background(), watchdservice.WithConfig(prevConfigPath))
 			require.NoError(t, err, "Cannot initialize watchd service")
@@ -542,7 +547,12 @@ func TestInteractiveUpdate(t *testing.T) {
 
 			// Submit
 			m = updateModel(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-			m = updateModel(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+			updateModel(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+
+			// Give time for the reinstall to propagate
+			if runtime.GOOS == "windows" {
+				time.Sleep(time.Second * 3)
+			}
 
 			// Check service status
 			status, err := svc.Status(context.Background())

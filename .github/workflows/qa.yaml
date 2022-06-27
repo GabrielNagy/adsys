@@ -2,7 +2,7 @@ name: QA
 on:
   push:
     branches:
-      - main
+      - windows-daemon-redux
     tags:
       - '*'
   pull_request:

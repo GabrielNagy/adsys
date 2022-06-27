@@ -31,7 +31,6 @@ type options struct {
 	extraArgs   []string
 	name        string
 	userService bool
-	interactive bool
 }
 type option func(*options) error
 
@@ -202,6 +201,28 @@ func (s *WatchdService) waitForStatus(ctx context.Context, status service.Status
 	return nil
 }
 
+func (s *WatchdService) waitForError(ctx context.Context, err error) error {
+	// Check that the service updated correctly.
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	var gotError bool
+	for !gotError {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			_, newError := s.service.Status()
+			if !errors.Is(err, newError) {
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+			gotError = true
+		}
+	}
+	return nil
+}
+
 // Restart restarts the watcher service.
 func (s *WatchdService) Restart(ctx context.Context) (err error) {
 	defer decorate.OnError(&err, i18n.G("failed to restart service"))
@@ -259,7 +280,7 @@ func (s *WatchdService) Status(ctx context.Context) (status string, err error) {
 	// If the service is installed, attempt to figure out the configured
 	// directories and the binary path.
 	var exePath string
-	var svcInfo serviceInfo
+	var svcInfo ServiceInfo
 	var pathMismatch bool
 
 	if stat != uninstalledState {
@@ -302,8 +323,8 @@ Current executable path: %s`), svcInfo.BinPath, exePath)
 	return status, nil
 }
 
-// serviceInfo represents the information gathered from the service arguments.
-type serviceInfo struct {
+// ServiceInfo represents the information gathered from the service arguments.
+type ServiceInfo struct {
 	ConfigFile string
 	Dirs       []string
 	BinPath    string
@@ -311,10 +332,10 @@ type serviceInfo struct {
 
 // Args returns the service configuration extracted from the
 // service arguments.
-func (s *WatchdService) Args(ctx context.Context) (svcInfo serviceInfo, err error) {
+func (s *WatchdService) Args(ctx context.Context) (svcInfo ServiceInfo, err error) {
 	defer decorate.OnError(&err, i18n.G("failed to get service info from arguments"))
 
-	svcInfo = serviceInfo{}
+	svcInfo = ServiceInfo{}
 	binPath, args, err := s.serviceArgs()
 	if err != nil {
 		return svcInfo, err
@@ -368,7 +389,11 @@ func (s *WatchdService) Uninstall(ctx context.Context) (err error) {
 		}
 	}
 
-	return s.service.Uninstall()
+	if err := s.service.Uninstall(); err != nil {
+		return err
+	}
+
+	return s.waitForError(ctx, service.ErrNotInstalled)
 }
 
 // Run runs the watcher service.
