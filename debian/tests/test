@@ -1,0 +1,20 @@
+#!/bin/bash
+
+set -ex
+
+DIR_NAME=$(dirname "$0")
+SCRIPT_NAME=$(basename "$0")
+
+if [ "$SCRIPT_NAME" = "test" ]; then
+    # Skip integration tests when building package: they need docker images
+    export ADSYS_SKIP_INTEGRATION_TESTS=1
+    export ADSYS_SKIP_SUDO_TESTS=1
+    PACKAGES_TO_TEST=./...
+else # SCRIPT_NAME = "test-sudo"
+    # Specifically run only the tests that require sudo
+    PACKAGES_TO_TEST=$(cat "$DIR_NAME"/.sudo-packages)
+fi
+
+
+# shellcheck disable=SC2086 # Splitting is intentional
+go test -v -mod=vendor $PACKAGES_TO_TEST
