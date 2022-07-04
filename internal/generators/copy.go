@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/ubuntu/adsys/internal/generators"
 )
@@ -22,7 +23,10 @@ func main() {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		log.Fatalf("Couldn't create dest directory: %v", err)
 	}
-	defer syscall.Sync()
+	defer func() {
+		time.Sleep(100 * time.Millisecond)
+		syscall.Sync()
+	}()
 
 	from, err := os.Open(os.Args[1])
 	if err != nil {
