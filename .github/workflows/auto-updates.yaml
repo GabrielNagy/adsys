@@ -2,7 +2,7 @@ name: Update translation and readme in main branch automatically
 on:
   push:
     branches:
-      - main
+      - cleanup-gh-actions
     paths-ignore:
       - po/*
       - README.md
@@ -18,10 +18,8 @@ jobs:
           export DEBIAN_FRONTEND=noninteractive
           apt update
           apt install -y gettext git
-      - name: work around permission issue with git vulnerability (we are local here). TO REMOVE
-        run: git config --global --add safe.directory /__w/adsys/adsys
       # Checkout code with git
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: main
       # Install go
@@ -33,11 +31,13 @@ jobs:
       - name: Check po files
         id: checkpo
         run: |
-          set -eu
+          set -eux
 
           hasModif="false"
           go generate ./internal/i18n/
           # Exclude line diffs only
+          echo $PWD
+          git status
           MODIFIED=$(git difftool -y -x "diff -Nup -I '^#: '" po/)
           if [ -n "$MODIFIED" ]; then
             hasModif="true"
@@ -45,7 +45,7 @@ jobs:
           echo "modified=${hasModif}" >> $GITHUB_ENV
       - name: Create Pull Request
         if: ${{ env.modified == 'true' }}
-        uses: peter-evans/create-pull-request@v3
+        uses: peter-evans/create-pull-request@v4
         with:
           commit-message: Auto update po files
           title: Auto update po files
@@ -70,10 +70,8 @@ jobs:
           export DEBIAN_FRONTEND=noninteractive
           apt update
           apt install -y libsmbclient-dev gcc pkg-config git
-      - name: work around permission issue with git vulnerability (we are local here). TO REMOVE
-        run: git config --global --add safe.directory /__w/adsys/adsys
       # Checkout code with git
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: main
       # Install go
