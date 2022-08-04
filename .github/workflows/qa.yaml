@@ -139,14 +139,12 @@ jobs:
   generators:
     name: Generated files are up to date
     runs-on: ubuntu-latest
-    container: ubuntu:latest
     steps:
       # Add dependencies
       - name: Install dependencies
         run: |
-          export DEBIAN_FRONTEND=noninteractive
-          apt update
-          apt install -y ca-certificates gcc pkg-config protobuf-compiler gettext git libsmbclient-dev
+          sudo DEBIAN_FRONTEND=noninteractive apt update
+          sudo DEBIAN_FRONTEND=noninteractive apt install -y gcc pkg-config protobuf-compiler gettext libsmbclient-dev
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
         with:

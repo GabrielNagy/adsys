@@ -11,13 +11,11 @@ jobs:
   update-po:
     name: Update po files
     runs-on: ubuntu-latest
-    container: ubuntu:rolling
     steps:
-      - name: Install dependencies, including git for checkout
+      - name: Install dependencies
         run: |
-          export DEBIAN_FRONTEND=noninteractive
-          apt update
-          apt install -y gettext git
+          sudo DEBIAN_FRONTEND=noninteractive apt update
+          sudo DEBIAN_FRONTEND=noninteractive apt install -y gettext
       # Checkout code with git
       - uses: actions/checkout@v3
         with:
@@ -63,13 +61,11 @@ jobs:
     # This should just be "after", but we don't want the 2 jobs to push at the same time
     needs: update-po
     runs-on: ubuntu-latest
-    container: ubuntu:rolling
     steps:
-      - name: Install dependencies, including git for checkout
+      - name: Install dependencies
         run: |
-          export DEBIAN_FRONTEND=noninteractive
-          apt update
-          apt install -y libsmbclient-dev gcc pkg-config git
+          sudo DEBIAN_FRONTEND=noninteractive apt update
+          sudo DEBIAN_FRONTEND=noninteractive apt install -y libsmbclient-dev gcc pkg-config
       # Checkout code with git
       - uses: actions/checkout@v3
         with:
