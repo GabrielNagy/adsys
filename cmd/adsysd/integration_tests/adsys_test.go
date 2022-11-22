@@ -26,7 +26,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-const dockerSystemDaemonsImage = "ghcr.io/ubuntu/adsys/systemdaemons:0.1"
+const dockerSystemDaemonsImage = "ghcr.io/ubuntu/adsys/systemdaemons:0.2"
 
 var (
 	update         bool

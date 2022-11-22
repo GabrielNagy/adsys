@@ -54,31 +54,22 @@ def main() -> int:
         ]
     )
 
-    parser.add_argument(
-        '-t', '--type', type=str, default='all',
-        choices=['session', 'system', 'all']
-    )
-
     args = parser.parse_args()
 
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     main_loop = GLib.MainLoop()
 
-    bus_type = args.type
+    system_bus = start_system_bus(DBUS_CONF_TEMPLATE)
+    run_system_mocks(system_bus, args.mode)
+    system_bus.add_signal_receiver(main_loop.quit, signal_name="Disconnected",
+                                   path="/org/freedesktop/DBus/Local",
+                                   dbus_interface="org.freedesktop.DBus.Local")
 
-    if bus_type == 'system' or bus_type == 'all':
-        system_bus = start_system_bus(DBUS_CONF_TEMPLATE)
-        run_system_mocks(system_bus, args.mode)
-        system_bus.add_signal_receiver(main_loop.quit, signal_name="Disconnected",
-                                       path="/org/freedesktop/DBus/Local",
-                                       dbus_interface="org.freedesktop.DBus.Local")
-
-    if bus_type == 'session' or bus_type == 'all':
-        session_bus = start_session_bus(DBUS_CONF_TEMPLATE)
-        run_session_mocks(session_bus, args.mode)
-        session_bus.add_signal_receiver(main_loop.quit, signal_name="Disconnected",
-                                        path="/org/freedesktop/DBus/Local",
-                                        dbus_interface="org.freedesktop.DBus.Local")
+    session_bus = start_session_bus(DBUS_CONF_TEMPLATE)
+    run_session_mocks(session_bus, args.mode)
+    session_bus.add_signal_receiver(main_loop.quit, signal_name="Disconnected",
+                                    path="/org/freedesktop/DBus/Local",
+                                    dbus_interface="org.freedesktop.DBus.Local")
 
     polkitd = allow_adsys_and_start_polkitd_in_bg(args.mode)
 

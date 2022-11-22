@@ -64,7 +64,7 @@ jobs:
 
   tests:
     name: Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
@@ -84,7 +84,7 @@ jobs:
           set -eu
 
           echo "${{ github.token }}" | docker login https://docker.pkg.github.com -u ${GITHUB_ACTOR} --password-stdin
-          docker pull docker.pkg.github.com/ubuntu/adsys/systemdaemons:0.1
+          docker pull docker.pkg.github.com/ubuntu/adsys/systemdaemons:0.2
       - name: Install cargo (nightly to get coverage)
         uses: actions-rs/toolchain@v1
         with:
@@ -92,6 +92,12 @@ jobs:
           override: true
       - name: Install grcov
         run: cargo install grcov
+
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
+        with:
+          limit-access-to-users: denisonbarbosa, gabrielnagy
+
       - name: Run tests
         run: |
           set -eu
