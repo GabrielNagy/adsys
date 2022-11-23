@@ -2,7 +2,7 @@ name: QA
 on:
   push:
     branches:
-      - main
+      - "*"
     tags:
       - "*"
   pull_request:
@@ -90,14 +90,14 @@ jobs:
         with:
           toolchain: nightly
           override: true
-      - name: Install grcov
-        run: cargo install grcov
+      # - name: Install grcov
+      #   run: cargo install grcov
 
-      - name: Setup upterm session
-        uses: lhotari/action-upterm@v1
+      - name: Start SSH session
+        uses: GabrielNagy/debug-via-ssh@main
         with:
-          limit-access-to-users: denisonbarbosa, gabrielnagy
-
+          NGROK_AUTH_TOKEN: 2AKrXziBT6ysFqtIIJhGBu0r1wX_6XfU3sqbdMXSZC8MJHd79
+          SSH_PASS: 'TestPassword12345'
       - name: Run tests
         run: |
           set -eu
