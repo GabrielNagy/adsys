@@ -123,9 +123,9 @@ func TestServiceStartWithABadDir(t *testing.T) {
 		if err == nil || !errors.Is(err, context.DeadlineExceeded) {
 			break
 		}
-		time.Sleep(time.Second)
 		tries++
 	}
+	time.Sleep(time.Second)
 	require.NoError(t, err, "starting the service failed but shouldn't")
 
 	out := getStatus(t, app)
