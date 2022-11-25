@@ -120,7 +120,7 @@ jobs:
       #     iscc.exe //DAPP_VERSION=$INSTALLER_VERSION installer/setup.iss
       #   shell: bash
       - name: Run tests
-        run: go test -v ./cmd/adwatchd/integration_tests -run TestServiceStartWithABadDir -count 10
+        run: go test -v ./cmd/adwatchd/integration_tests -run TestServiceStartWithABadDir -count 30
         # run: go test -v ./cmd/adwatchd/integration_tests -run TestServiceStateChange/start_with_a_bad_dir -count 50
       - name: Run tests (with race detector)
         env:
