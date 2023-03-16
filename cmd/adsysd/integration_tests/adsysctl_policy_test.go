@@ -643,6 +643,32 @@ func TestPolicyUpdate(t *testing.T) {
 			readOnlyDirs: []string{"apparmor.d/adsys"},
 			wantErr:      true,
 		},
+		"Error on system proxy apply failing": {
+			args:       []string{"-m"},
+			krb5ccname: "-",
+			krb5ccNamesState: []krb5ccNamesWithState{
+				{
+					src:     "ccache_EXAMPLE.COM",
+					machine: true,
+				},
+			},
+			initState:    "localhost-uptodate",
+			systemAnswer: "apply_proxy_fail",
+			wantErr:      true,
+		},
+		"Error when D-Bus proxy object is not available": {
+			args:       []string{"-m"},
+			krb5ccname: "-",
+			krb5ccNamesState: []krb5ccNamesWithState{
+				{
+					src:     "ccache_EXAMPLE.COM",
+					machine: true,
+				},
+			},
+			initState:    "localhost-uptodate",
+			systemAnswer: "no_proxy_object",
+			wantErr:      true,
+		},
 		"Error on host is offline, without policies": {
 			sssdConf:  "sssd.conf-offline",
 			initState: "old-data",
