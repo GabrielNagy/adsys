@@ -1,4 +1,20 @@
 // Package apparmor provides a manager to apply apparmor policies.
+//
+// The policy manager first checks for the existence of the apparmor_parser
+// executable, and proceeds differently if the executable is not found,
+// depending on whether there are confingured entries in the GPO:
+// - no entries: a warning is logged and the manager returns without error
+// - entries: the manager returns an error if apparmor_parser is not found
+//
+// Next, if we found no entries to apply (either to them not existing or being
+// disabled), we attempt to unload all rules managed by ADSys.
+//
+// If there are entries to apply, based on the object type (machine or user), we
+// attempt to apply them. This process is more clearly outlined in the
+// ApplyPolicy function documentation.
+//
+// If any errors occur during the policy apply process, the manager will attempt
+// to restore the initial state of the system before returning an error.
 package apparmor
 
 import (
