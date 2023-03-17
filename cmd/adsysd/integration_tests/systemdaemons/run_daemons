@@ -19,7 +19,7 @@ ADSYS_POLICY_PATH_SRC = "/usr/share/polkit-1/actions.orig/com.ubuntu.adsys.polic
 ADSYS_POLICY_PATH_DST = "/usr/share/polkit-1/actions/com.ubuntu.adsys.policy"
 
 # For testing purposes
-# ADSYS_POLICY_PATH_SRC = "/tmp/actions.orig/com.ubuntu.adsys.policy"
+# ADSYS_POLICY_PATH_SRC = "/home/gabi/repo/adsys/internal/adsysservice/actions/com.ubuntu.adsys.policy"
 # ADSYS_POLICY_PATH_DST = "/tmp/actions/com.ubuntu.adsys.policy"
 
 DBUS_CONF_TEMPLATE = '''\
