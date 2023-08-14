@@ -91,11 +91,11 @@ jobs:
           labels: automated pr
           body-path: samba-patched/pr-body
           add-paths: |
-            .github/samba
-            internal/policies/certificate/python/vendor_samba
+            .github/samba/
+            internal/policies/certificate/python/vendor_samba/
           branch: auto-update-samba
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Push branch
-        if: ${{ steps.po-diff.outputs.diff == 'true' }}
+        if: ${{ steps.samba-diff.outputs.diff == 'true' }}
         run: |
           git push origin auto-update-samba:main
