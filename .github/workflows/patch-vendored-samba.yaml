@@ -44,6 +44,7 @@ jobs:
         if: ${{ steps.compute-diff.outputs.changed == 'true' }}
         uses: actions/upload-artifact@v3
         with:
+          name: samba
           path: |
             samba-git
             !samba-git/.git
@@ -58,13 +59,13 @@ jobs:
       - name: Replace with updated Samba source
         uses: actions/download-artifact@v3
         with:
-          path: .github/samba
+          path: .github
       - name: Prepare pull request body
         run: echo "Automated changes to vendored Samba code" > .github/pr-body
       - name: Prepare patch working directory
         run: cp -a .github/samba samba-patched
       - name: Apply patch series
-        run: patch -f -d samba-patched -r rejected -p1 < <(cat .github/samba/_patches/*.patch)
+        run: patch -f -d samba-patched -r rejected --no-backup-if-mismatch -p1 < <(cat .github/samba/_patches/*.patch)
       - name: Add rejected hunks to PR body
         if: ${{ failure() }}
         run: |
