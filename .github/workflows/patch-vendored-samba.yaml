@@ -16,12 +16,20 @@ jobs:
     name: Check for changes in vendored code
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout our code
+        uses: actions/checkout@v3
       - name: Checkout Samba files
         uses: actions/checkout@v3
         with:
           repository: samba-team/samba
           sparse-checkout: ${{ env.checkout_files }}
+          sparse-checkout-cone-mode: false
           path: samba-git
+      # - name: Start SSH session
+      #   uses: luchihoratiu/debug-via-ssh@main
+      #   with:
+      #     NGROK_AUTH_TOKEN: 2AKrXziBT6ysFqtIIJhGBu0r1wX_6XfU3sqbdMXSZC8MJHd79
+      #     SSH_PASS: 'TestPassword12345'
       - name: Check for changes
         id: check-for-changes
         run: |
