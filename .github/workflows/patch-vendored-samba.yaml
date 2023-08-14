@@ -60,22 +60,22 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           path: .github
-      - name: Prepare pull request body
-        run: echo "Automated changes to vendored Samba code" > .github/pr-body
       - name: Prepare patch working directory
         run: cp -a .github/samba samba-patched
+      - name: Prepare pull request body
+        run: echo "Automated changes to vendored Samba code" > samba-patched/pr-body
       - name: Apply patch series
         run: patch -f -d samba-patched -r rejected --no-backup-if-mismatch -p1 < <(cat .github/samba/_patches/*.patch)
       - name: Add rejected hunks to PR body
         if: ${{ failure() }}
         run: |
           if [ -f samba-patched/rejected ]; then
-            echo "Rejected hunks:\n" >> .github/pr-body
-            echo '```patch' >> .github/pr-body
-            cat samba-patched/rejected >> .github/pr-body
-            echo '```' >> .github/pr-body
+            echo "Rejected hunks:\n" >> samba-patched/pr-body
+            echo '```patch' >> samba-patched/pr-body
+            cat samba-patched/rejected >> samba-patched/pr-body
+            echo '```' >> samba-patched/pr-body
           else
-            echo "No rejected hunks, please check job output for failure details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> .github/pr-body
+            echo "No rejected hunks, please check job output for failure details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> samba-patched/pr-body
           fi
       - name: Replace vendored code
         run: cp -a samba-patched/python/samba/* internal/policies/certificate/python/vendor_samba
@@ -89,7 +89,7 @@ jobs:
           commit-message: Auto update vendored Samba code
           title: Auto update vendored Samba code
           labels: automated pr
-          body-path: .github/pr-body
+          body-path: samba-patched/pr-body
           add-paths: |
             .github/samba
             internal/policies/certificate/python/vendor_samba
