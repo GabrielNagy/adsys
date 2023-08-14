@@ -64,7 +64,7 @@ jobs:
       - name: Prepare patch working directory
         run: cp -a .github/samba samba-patched
       - name: Apply patch series
-        run: patch -f -d samba-patched -r rejected -p1 < .github/samba/_patches/*.patch
+        run: patch -f -d samba-patched -r rejected -p1 < <(cat .github/samba/_patches/*.patch)
       - name: Add rejected hunks to PR body
         if: ${{ failure() }}
         run: |
