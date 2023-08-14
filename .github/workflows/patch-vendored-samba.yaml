@@ -15,9 +15,10 @@ jobs:
   check-for-changes:
     name: Check for changes in vendored code
     runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.compute-diff.outputs.changed }}
     steps:
-      - name: Checkout our code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - name: Checkout Samba files
         uses: actions/checkout@v3
         with:
@@ -31,22 +32,21 @@ jobs:
       #     NGROK_AUTH_TOKEN: 2AKrXziBT6ysFqtIIJhGBu0r1wX_6XfU3sqbdMXSZC8MJHd79
       #     SSH_PASS: 'TestPassword12345'
       - name: Check for changes
-        id: check-for-changes
+        id: compute-diff
         run: |
-          changed=false
           for file in $checkout_files; do
             if ! diff -q samba-git/$file .github/samba/$file; then
-              changed=true
+              echo "changed=true" >> $GITHUB_OUTPUT
               break
             fi
           done
-
-          echo "changed=$changed" >> $GITHUB_OUTPUT
       - name: Upload
-        if: ${{ steps.check-for-changes.outputs.changed == 'true' }}
+        if: ${{ steps.compute-diff.outputs.changed == 'true' }}
         uses: actions/upload-artifact@v3
         with:
-          path: samba-git
+          path: |
+            samba-git
+            !samba-git/.git
 
   patch-vendored-code:
     name: Patch vendored code
@@ -54,6 +54,7 @@ jobs:
     needs: check-for-changes
     if: ${{ needs.check-for-changes.outputs.changed == 'true' }}
     steps:
+      - uses: actions/checkout@v3
       - name: Replace with updated Samba source
         uses: actions/download-artifact@v3
         with:
