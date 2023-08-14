@@ -78,8 +78,11 @@ jobs:
           fi
       - name: Replace vendored code
         run: cp -a samba-patched/python/samba/* internal/policies/certificate/python/vendor_samba
+      - name: Check if there is a diff
+        id: samba-diff
+        uses: canonical/desktop-engineering/gh-actions/common/has-diff@main
       - name: Create Pull Request
-        if: ${{ steps.po-diff.outputs.diff == 'true' }}
+        if: ${{ steps.samba-diff.outputs.diff == 'true' }}
         uses: peter-evans/create-pull-request@v5
         with:
           commit-message: Auto update vendored Samba code
