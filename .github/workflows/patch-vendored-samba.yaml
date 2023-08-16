@@ -66,7 +66,7 @@ jobs:
       - name: Add rejected hunks to PR body
         if: ${{ failure() }}
         run: |
-          if [ -f samba-patched/rejected ]; then
+          if [ -f samba-patched/rejectedd ]; then
             echo "### Rejected hunks:" >> samba-patched/pr-body
             echo '```patch' >> samba-patched/pr-body
             cat samba-patched/rejected >> samba-patched/pr-body

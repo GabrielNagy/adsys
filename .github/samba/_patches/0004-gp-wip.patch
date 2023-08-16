@@ -23,7 +23,7 @@ index e428737ba50..30ff07ba433 100644
 @@ -173,8 +173,7 @@ def fetch_template_attrs(ldb, name, attrs=None):
          return {'msPKI-Minimal-Key-Size': ['2048']}
  
- def format_root_cert(cert):
+ def format_root_cert(cert)
 -    cert = base64.b64encode(cert.encode())
 -    return cert_wrap % re.sub(b"(.{64})", b"\\1\n", cert, 0, re.DOTALL)
 +    return cert_wrap % re.sub(b"(.{64})", b"\\1\n", cert.encode(), 0, re.DOTALL)
