@@ -105,7 +105,9 @@ Supported on Ubuntu 20.04, 22.04, 23.04, 23.10.</string>
 
 - Type: dconf
 - Key: /org/gnome/desktop/background/picture-uri-dark
-- Default: &#39;file:///usr/share/backgrounds/warty-final-ubuntu.png&#39;
+- Default for 22.04: &#39;file:///usr/share/backgrounds/warty-final-ubuntu.png&#39;
+- Default for 23.04: &#39;file:///usr/share/backgrounds/warty-final-ubuntu.png&#39;
+- Default for 23.10: &#39;file:///usr/share/backgrounds/ubuntu-wallpaper-d.png&#39;
 
 Note: default system value is used for &#34;Not Configured&#34; and enforced if &#34;Disabled&#34;.
 
@@ -170,7 +172,7 @@ Supported on Ubuntu 20.04, 22.04, 23.04, 23.10.</string>
 - Default for 20.04: [ &#39;ubiquity.desktop&#39;, &#39;firefox.desktop&#39;, &#39;thunderbird.desktop&#39;, &#39;org.gnome.Nautilus.desktop&#39;, &#39;rhythmbox.desktop&#39;, &#39;libreoffice-writer.desktop&#39;, &#39;snap-store_ubuntu-software.desktop&#39;, &#39;yelp.desktop&#39; ]
 - Default for 22.04: [ &#39;ubuntu-desktop-installer_ubuntu-desktop-installer.desktop&#39;, &#39;ubiquity.desktop&#39;, &#39;firefox_firefox.desktop&#39;, &#39;thunderbird.desktop&#39;, &#39;org.gnome.Nautilus.desktop&#39;, &#39;rhythmbox.desktop&#39;, &#39;libreoffice-writer.desktop&#39;, &#39;snap-store_ubuntu-software.desktop&#39;, &#39;yelp.desktop&#39; ]
 - Default for 23.04: [ &#39;ubuntu-desktop-installer_ubuntu-desktop-installer.desktop&#39;, &#39;ubiquity.desktop&#39;, &#39;firefox_firefox.desktop&#39;, &#39;thunderbird.desktop&#39;, &#39;org.gnome.Nautilus.desktop&#39;, &#39;rhythmbox.desktop&#39;, &#39;libreoffice-writer.desktop&#39;, &#39;snap-store_ubuntu-software.desktop&#39;, &#39;yelp.desktop&#39; ]
-- Default for 23.10: [ &#39;ubuntu-desktop-installer_ubuntu-desktop-installer.desktop&#39;, &#39;ubiquity.desktop&#39;, &#39;firefox_firefox.desktop&#39;, &#39;thunderbird.desktop&#39;, &#39;org.gnome.Nautilus.desktop&#39;, &#39;rhythmbox.desktop&#39;, &#39;libreoffice-writer.desktop&#39;, &#39;snap-store_ubuntu-software.desktop&#39;, &#39;yelp.desktop&#39; ]
+- Default for 23.10: [ &#39;ubuntu-desktop-installer_ubuntu-desktop-installer.desktop&#39;, &#39;ubiquity.desktop&#39;, &#39;firefox_firefox.desktop&#39;, &#39;thunderbird.desktop&#39;, &#39;org.gnome.Nautilus.desktop&#39;, &#39;rhythmbox.desktop&#39;, &#39;libreoffice-writer.desktop&#39;, &#39;snap-store_snap-store.desktop&#39;, &#39;yelp.desktop&#39; ]
 
 Note: default system value is used for &#34;Not Configured&#34; and enforced if &#34;Disabled&#34;.
 
@@ -404,7 +406,10 @@ Supported on Ubuntu 20.04, 22.04, 23.04, 23.10.</string>
 
 - Type: dconf
 - Key: /org/gnome/shell/keybindings/toggle-overview
-- Default: [&#34;&lt;Super&gt;s&#34;]
+- Default for 20.04: [&#34;&lt;Super&gt;s&#34;]
+- Default for 22.04: [&#34;&lt;Super&gt;s&#34;]
+- Default for 23.04: [&#34;&lt;Super&gt;s&#34;]
+- Default for 23.10: []
 
 Note: default system value is used for &#34;Not Configured&#34; and enforced if &#34;Disabled&#34;.
 
@@ -1137,7 +1142,7 @@ Supported on Ubuntu 20.04, 22.04, 23.04, 23.10.</string>
       <string id="UbuntuDisplayMachine2304DconfOrgGnomeSettingsDaemonPluginsPowerLidCloseSuspendWithExternalMonitor">Laptop lid, when closed, will suspend even if there is an external monitor plugged in</string>
       <string id="UbuntuDisplayMachine2204DconfOrgGnomeSettingsDaemonPluginsPowerLidCloseSuspendWithExternalMonitor">Laptop lid, when closed, will suspend even if there is an external monitor plugged in</string>
       <string id="UbuntuDisplayMachine2004DconfOrgGnomeSettingsDaemonPluginsPowerLidCloseSuspendWithExternalMonitor">Laptop lid, when closed, will suspend even if there is an external monitor plugged in</string>
-      <string id="UbuntuExplainTextMachineDconfOrgGnomeSettingsDaemonPluginsPowerPowerButtonAction">The action to take when the system power button is pressed. This action is hard-coded (and the setting ignored) on virtual machines (power off) and tablets (suspend).
+      <string id="UbuntuExplainTextMachineDconfOrgGnomeSettingsDaemonPluginsPowerPowerButtonAction">The action to take when the system power button is pressed. Virtual machines only honor the &#39;nothing&#39; action, and will shutdown otherwise. Tablets always suspend, ignoring all the other action options.
 
 - Type: dconf
 - Key: /org/gnome/settings-daemon/plugins/power/power-button-action
@@ -1718,7 +1723,7 @@ An Ubuntu Pro subscription on the client is required to apply this policy.</stri
         <checkBox refId="UbuntuOverrideElemUser2310DconfOrgGnomeDesktopBackgroundPictureUriDark" defaultChecked="false">Override value for 23.10:</checkBox>
         <textBox refId="UbuntuElemUser2310DconfOrgGnomeDesktopBackgroundPictureUriDark">
           <label></label>
-          <defaultValue>'file:///usr/share/backgrounds/warty-final-ubuntu.png'</defaultValue>
+          <defaultValue>'file:///usr/share/backgrounds/ubuntu-wallpaper-d.png'</defaultValue>
         </textBox>
         <text/>
         <checkBox refId="UbuntuOverrideElemUser2304DconfOrgGnomeDesktopBackgroundPictureUriDark" defaultChecked="false">Override value for 23.04:</checkBox>
