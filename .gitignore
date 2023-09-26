@@ -37,6 +37,9 @@ debian/adsys-windows
 /adsysctl
 /adsys.yaml
 
+# E2E testing
+inventory.yaml
+
 # GitHub CI temporary files
 node_modules
 package-lock.json
