@@ -9,6 +9,8 @@ const (
 
 	BaseVMCreated   State = "base_vm_created"
 	TemplateCreated State = "template_created"
-	VMProvisioned   State = "vm_provisioned"
-	ADProvisioned   State = "ad_provisioned"
+
+	PackageBuilt      State = "package_built"
+	ClientProvisioned State = "client_provisioned"
+	ADProvisioned     State = "ad_provisioned"
 )

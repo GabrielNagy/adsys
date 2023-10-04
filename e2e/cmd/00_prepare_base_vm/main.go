@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/google/uuid"
 	"github.com/mitchellh/go-homedir"
@@ -18,15 +17,11 @@ import (
 	"github.com/ubuntu/adsys/e2e/internal/command"
 	"github.com/ubuntu/adsys/e2e/internal/inventory"
 	"github.com/ubuntu/adsys/e2e/internal/remote"
+	"github.com/ubuntu/adsys/e2e/scripts"
 )
 
 var vmImage, codename, sshKey string
-var preserveVM bool
-
-type vmInfo struct {
-	IP string `json:"privateIpAddress"`
-	ID string `json:"id"`
-}
+var preserve bool
 
 func main() {
 	os.Exit(run())
@@ -46,7 +41,7 @@ Options:
                          image (e.g. Ubuntu2204, canonical:0001-com-ubuntu-server-focal:20_04-lts-gen2:latest)
  --codename              Required: codename of the Ubuntu release (e.g. focal)
  --ssh-key               SSH private key to use for authentication (default: ~/.ssh/id_rsa)
- -p, --preserve-vm       Don't destroy VM if template creation fails (default: false)
+ -p, --preserve          Don't destroy VM if template creation fails (default: false)
 
 This script will:
  - create a VM from the specified Azure VM image
@@ -60,13 +55,13 @@ The machine must be connected to the ADSys integration tests VPN.`, filepath.Bas
 	cmd.AddStringFlag(&vmImage, "vm-image", "", "")
 	cmd.AddStringFlag(&codename, "codename", "", "")
 	cmd.AddStringFlag(&sshKey, "ssh-key", "", "")
-	cmd.AddBoolFlag(&preserveVM, "preserve-vm", false, "")
+	cmd.AddBoolFlag(&preserve, "preserve", false, "")
+	cmd.AddBoolFlag(&preserve, "p", false, "")
 
 	uuid := uuid.NewString()
 	cmd.Inventory = inventory.Inventory{
-		Codename:      codename,
-		UUID:          uuid,
-		ResourceGroup: "AD",
+		Codename: codename,
+		UUID:     uuid,
 	}
 
 	return cmd.Execute(context.Background())
@@ -98,7 +93,7 @@ func action(ctx context.Context, cmd *command.Command) error {
 
 	log.Infof("Creating VM %q from image %q with codename %q", vmName, vmImage, codename)
 	out, _, err := az.RunCommand(ctx, "vm", "create",
-		"--resource-group", inv.ResourceGroup,
+		"--resource-group", "AD",
 		"--name", vmName,
 		"--image", vmImage,
 		"--admin-username", "azureuser",
@@ -126,20 +121,19 @@ func action(ctx context.Context, cmd *command.Command) error {
 		}
 		log.Error(err)
 
-		if preserveVM {
+		if preserve {
 			log.Infof("Preserving VM as requested...")
 			return
 		}
 
-		log.Infof("Template creation failed, destroying VM...")
-		if err := az.DeleteVM(context.Background(), inv); err != nil {
+		if err := az.DeleteVM(context.Background(), vmName); err != nil {
 			log.Error(err)
 		}
 	}()
 
 	// Parse create output to determine VM ID and private IP address
 	log.Infof("Base VM created. Getting IP address...")
-	var vm vmInfo
+	var vm az.VMInfo
 	if err := json.Unmarshal(out, &vm); err != nil {
 		return fmt.Errorf("failed to parse az vm create output: %w", err)
 	}
@@ -167,12 +161,11 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ubuntu-desktop realmd nfs
 
 	// Upload provisioning script
 	log.Infof("Staging first run script to VM...")
-	_, currentFile, _, ok := runtime.Caller(0)
-	if !ok {
-		return fmt.Errorf("failed to get current file path")
+	scriptsDir, err := scripts.Dir()
+	if err != nil {
+		return fmt.Errorf("failed to get scripts directory: %w", err)
 	}
-	e2eDir := filepath.Dir(filepath.Dir(filepath.Dir(currentFile)))
-	provisionScriptPath := filepath.Join(e2eDir, "scripts", "provision.sh")
+	provisionScriptPath := filepath.Join(scriptsDir, "provision.sh")
 	if err := client.Upload(provisionScriptPath, "/home/azureuser/provision.sh"); err != nil {
 		return fmt.Errorf("failed to upload provisioning script: %w", err)
 	}
@@ -204,14 +197,14 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ubuntu-desktop realmd nfs
 	// Stop and deallocate VM
 	log.Infof("Deallocating VM...")
 	_, _, err = az.RunCommand(ctx, "vm", "stop",
-		"--resource-group", inv.ResourceGroup,
+		"--resource-group", "AD",
 		"--name", vmName,
 	)
 	if err != nil {
 		return err
 	}
 	_, _, err = az.RunCommand(ctx, "vm", "deallocate",
-		"--resource-group", inv.ResourceGroup,
+		"--resource-group", "AD",
 		"--name", vmName,
 	)
 	if err != nil {

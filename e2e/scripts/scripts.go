@@ -1,5 +1,4 @@
-// Package scripts includes script files that are copied to target VMs and used
-// by the e2e test suite.
+// Package scripts includes script files used by the e2e test suite.
 package scripts
 
 import (
@@ -15,4 +14,14 @@ func Dir() (string, error) {
 		return "", fmt.Errorf("failed to get current file path")
 	}
 	return filepath.Dir(currentFile), nil
+}
+
+// RootDir returns the root directory of the project.
+func RootDir() (string, error) {
+	currentDir, err := Dir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Dir(filepath.Dir(currentDir)), nil
 }

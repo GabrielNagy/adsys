@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -141,7 +142,6 @@ func (c Client) Run(ctx context.Context, cmd string) ([]byte, error) {
 
 // Upload uploads the given local file to the remote host.
 func (c Client) Upload(localPath string, remotePath string) error {
-	log.Infof("Server version: %s", c.ServerVersion())
 	log.Infof("Uploading %q to %q on host %q", localPath, remotePath, c.RemoteAddr().String())
 	local, err := os.Open(localPath)
 	if err != nil {
@@ -154,6 +154,15 @@ func (c Client) Upload(localPath string, remotePath string) error {
 		return err
 	}
 	defer ftp.Close()
+
+	stat, err := ftp.Stat(remotePath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("failed to stat remote path: %w", err)
+	}
+	// If the remote path is a directory, append the local file name to it
+	if stat != nil && stat.IsDir() {
+		remotePath = filepath.Join(remotePath, filepath.Base(localPath))
+	}
 
 	remote, err := ftp.Create(remotePath)
 	if err != nil {

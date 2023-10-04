@@ -8,8 +8,13 @@ import (
 	"os/exec"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/ubuntu/adsys/e2e/internal/inventory"
 )
+
+// VMInfo contains information about a VM returned by az vm create.
+type VMInfo struct {
+	IP string `json:"privateIpAddress"`
+	ID string `json:"id"`
+}
 
 // RunCommand runs the Azure CLI with the given arguments.
 func RunCommand(ctx context.Context, args ...string) ([]byte, []byte, error) {
@@ -30,13 +35,12 @@ func RunCommand(ctx context.Context, args ...string) ([]byte, []byte, error) {
 	return outb.Bytes(), errb.Bytes(), err
 }
 
-// DeleteVM deletes the inventory VM in Azure.
-func DeleteVM(ctx context.Context, inv inventory.Inventory) error {
-	vmName := fmt.Sprintf("adsys-integration-%s-%s", inv.Codename, inv.UUID)
+// DeleteVM deletes the VM with the given name from Azure.
+func DeleteVM(ctx context.Context, vmName string) error {
 	log.Infof("Deleting VM %q", vmName)
 
 	_, _, err := RunCommand(ctx, "vm", "delete",
-		"--resource-group", inv.ResourceGroup,
+		"--resource-group", "AD",
 		"--name", vmName,
 		"--force-deletion", "true",
 		"--yes",

@@ -19,7 +19,7 @@ import (
 )
 
 var version string
-var preserveVM bool
+var preserve bool
 
 type imageVersion struct {
 	Version string `json:"name"`
@@ -36,11 +36,9 @@ func run() int {
 Generalize an Azure VM to use as a template for integration tests.
 
 Options:
- --version               override the template version number (default behavior is to
-                         auto-increment the latest version by 0.0.1)
- -p, --preserve-state    preserve base VM after creating image version (default: false)
- -d, --debug             enable debug logging (default: false)
- -h, --help              print this message and exit
+ --version          override the template version number (default behavior is to
+                    auto-increment the latest version by 0.0.1)
+ -p, --preserve     preserve base VM after creating image version (default: false)
 
 This script will:
  - create an Azure image definition for the Ubuntu version of the VM unless it already exists
@@ -53,7 +51,7 @@ created by the 00_prepare_base_vm script.
 The machine must be authenticated to Azure via the Azure CLI.`, filepath.Base(os.Args[0]))
 
 	cmd.AddStringFlag(&version, "version", "", "")
-	cmd.AddBoolFlag(&preserveVM, "preserve-vm", false, "")
+	cmd.AddBoolFlag(&preserve, "preserve", false, "")
 
 	return cmd.Execute(context.Background())
 }
@@ -62,7 +60,7 @@ func action(ctx context.Context, cmd *command.Command) error {
 	inv := cmd.Inventory
 
 	imageDefinition := fmt.Sprintf("ubuntu-desktop-%s", inv.Codename)
-	latestImageVersion, err := latestImageVersion(ctx, inv.ResourceGroup, imageDefinition)
+	latestImageVersion, err := latestImageVersion(ctx, imageDefinition)
 	if err != nil {
 		return err
 	}
@@ -72,8 +70,8 @@ func action(ctx context.Context, cmd *command.Command) error {
 	if latestImageVersion == "" {
 		log.Infof("Creating image definition %q", imageDefinition)
 		_, _, err := az.RunCommand(ctx, "sig", "image-definition", "create",
-			"--resource-group", inv.ResourceGroup,
-			"--gallery-name", inv.ResourceGroup,
+			"--resource-group", "AD",
+			"--gallery-name", "AD",
 			"--gallery-image-definition", imageDefinition,
 			"--publisher", "Canonical",
 			"--offer", imageDefinition,
@@ -97,8 +95,8 @@ func action(ctx context.Context, cmd *command.Command) error {
 	// Create the image version
 	log.Infof("Creating image version %q for image definition %q", nextImageVersion, imageDefinition)
 	_, _, err = az.RunCommand(ctx, "sig", "image-version", "create",
-		"--resource-group", inv.ResourceGroup,
-		"--gallery-name", inv.ResourceGroup,
+		"--resource-group", "AD",
+		"--gallery-name", "AD",
 		"--gallery-image-definition", imageDefinition,
 		"--gallery-image-version", nextImageVersion,
 		"--target-regions", "westeurope", "eastus=1=standard_zrs",
@@ -111,21 +109,21 @@ func action(ctx context.Context, cmd *command.Command) error {
 	}
 
 	// Destroy base VM unless otherwise specified
-	if preserveVM {
+	if preserve {
 		log.Infof("Preserving resource %q as requested", inv.VMID)
 		return nil
 	}
-	if err := az.DeleteVM(ctx, inv); err != nil {
+	if err := az.DeleteVM(ctx, cmd.Inventory.VMName); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func latestImageVersion(ctx context.Context, resourceGroup, imageDefinition string) (string, error) {
+func latestImageVersion(ctx context.Context, imageDefinition string) (string, error) {
 	out, _, err := az.RunCommand(ctx, "sig", "image-version", "list",
-		"--resource-group", resourceGroup,
-		"--gallery-name", resourceGroup,
+		"--resource-group", "AD",
+		"--gallery-name", "AD",
 		"--gallery-image-definition", imageDefinition,
 	)
 	if err != nil {

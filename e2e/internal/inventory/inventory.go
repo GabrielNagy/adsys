@@ -13,15 +13,14 @@ const DefaultPath = "inventory.yaml"
 
 // Inventory represents the contents of an inventory file.
 type Inventory struct {
-	IP            string `yaml:"ip"`
-	VMID          string `yaml:"vm_id"`
-	UUID          string `yaml:"uuid"`
-	VMName        string `yaml:"vm_name"`
-	ResourceGroup string `yaml:"resource_group"`
-	Codename      string `yaml:"codename"`
-	State         State  `yaml:"state"`
-	SSHKeyPath    string `yaml:"ssh_key_path"`
-	Hostname      string `yaml:"hostname"`
+	IP         string `yaml:"ip"`
+	VMID       string `yaml:"vm_id"`
+	UUID       string `yaml:"uuid"`
+	VMName     string `yaml:"vm_name"`
+	Codename   string `yaml:"codename"`
+	State      State  `yaml:"state"`
+	SSHKeyPath string `yaml:"ssh_key_path"`
+	Hostname   string `yaml:"hostname"`
 }
 
 // Write writes the inventory file to the given path.
