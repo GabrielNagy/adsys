@@ -108,7 +108,7 @@ func action(ctx context.Context, cmd *command.Command) error {
 		"--ssh-key-name", "adsys-integration",
 		"--storage-sku", "StandardSSD_LRS",
 		"--os-disk-delete-option", "Delete",
-		"--tags", "project=AD", "subproject=adsys-integration-tests", "lifetime=12h",
+		"--tags", "project=AD", "subproject=adsys-integration-tests", "lifetime=6h",
 	)
 	if err != nil {
 		return err

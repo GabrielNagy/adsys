@@ -80,7 +80,8 @@ jobs:
           go run ./e2e/cmd/00_check_vm_image --codename ${{ matrix.codename }} ${force} | tee image_urn.txt
 
       # These steps only run if the template needs to be created
-      - uses: ./.github/actions/azure-sstpc-vpn
+      - name: Set up VPN connection
+        uses: ./.github/actions/azure-sstpc-vpn
         if: steps.check-vm-template.outcome == 'success'
         with:
           gateway: ${{ secrets.VPN_GATEWAY }}
