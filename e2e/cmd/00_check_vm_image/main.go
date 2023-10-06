@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
+	"github.com/maruel/natural"
 	"github.com/ubuntu/adsys/e2e/internal/az"
 	"github.com/ubuntu/adsys/e2e/internal/command"
 	"golang.org/x/exp/slices"
@@ -84,12 +84,12 @@ func action(ctx context.Context, cmd *command.Command) error {
 	}
 
 	// The release is still in development and we already have a daily image built, nothing to do
-	if strings.Contains(latestImageVersion, "dev") && stableIdx == -1 && !force {
+	if natural.Less(latestImageVersion, "1.0.0") && stableIdx == -1 && !force {
 		return fmt.Errorf("no stable image found for codename %q and development image already exists", codename)
 	}
 
 	// The release is stable and we already have a stable image built, nothing to do
-	if !strings.Contains(latestImageVersion, "dev") && stableIdx != -1 && !force {
+	if !natural.Less(latestImageVersion, "1.0.0") && stableIdx != -1 && !force {
 		return fmt.Errorf("stable image for codename %q already exists", codename)
 	}
 

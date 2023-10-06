@@ -102,5 +102,4 @@ jobs:
       - name: Create template version
         if: steps.check-vm-template.outcome == 'success'
         run: |
-          echo asd
           go run ./e2e/cmd/02_create_vm_template

@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/maruel/natural"
 	log "github.com/sirupsen/logrus"
 	"github.com/ubuntu/adsys/e2e/internal/az"
 	"github.com/ubuntu/adsys/e2e/internal/command"
@@ -65,6 +66,24 @@ func action(ctx context.Context, cmd *command.Command) error {
 
 	isDevelopmentVersion := strings.Contains(cmd.Inventory.BaseVMImage, "daily")
 	nextImageVersion := incrementVersion(latestImageVersion, isDevelopmentVersion)
+
+	// Destroy VM if template creation fails
+	defer func() {
+		if err == nil {
+			return
+		}
+		log.Error(err)
+
+		if preserve {
+			log.Infof("Preserving VM as requested...")
+			return
+		}
+
+		if err := az.DeleteVM(context.Background(), cmd.Inventory.VMName); err != nil {
+			log.Error(err)
+		}
+	}()
+
 	// If the version is empty, we need to create the image definition
 	if latestImageVersion == "" {
 		log.Infof("Creating image definition %q", imageDefinition)
@@ -121,8 +140,12 @@ func action(ctx context.Context, cmd *command.Command) error {
 
 func incrementVersion(version string, dev bool) string {
 	firstVersion := "0.0.1"
-	if dev {
-		firstVersion += "dev"
+	// Non-development images begin at 1.0.0
+	if !dev {
+		firstVersion = "1.0.0"
+		if natural.Less(version, firstVersion) {
+			return firstVersion
+		}
 	}
 
 	parts := strings.Split(version, ".")
@@ -136,9 +159,5 @@ func incrementVersion(version string, dev bool) string {
 	}
 	patch++
 
-	v := fmt.Sprintf("%s.%d", strings.Join(parts[:2], "."), patch)
-	if dev {
-		v += "dev"
-	}
-	return v
+	return fmt.Sprintf("%s.%d", strings.Join(parts[:2], "."), patch)
 }

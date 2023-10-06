@@ -30,7 +30,7 @@ func RunCommand(ctx context.Context, args ...string) ([]byte, []byte, error) {
 		log.Debugf("\tSTDOUT: %s", outb.String())
 	}
 	if errb.Len() > 0 {
-		log.Debugf("\tSTDERR: %s", errb.String())
+		log.Warningf("\tSTDERR: %s", errb.String())
 	}
 	return outb.Bytes(), errb.Bytes(), err
 }
