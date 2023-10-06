@@ -20,7 +20,7 @@ import (
 )
 
 // commandTimeout is the maximum time a command can run before being cancelled.
-const commandTimeout = 1 * time.Hour
+const commandTimeout = 90 * time.Minute
 
 // Client represents a remote SSH client.
 type Client struct {
