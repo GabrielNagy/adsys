@@ -4,7 +4,7 @@ concurrency: build-templates
 on:
   workflow_dispatch:
     inputs:
-      codename:
+      codenames:
         description: 'Comma-separated list of codenames to build for (e.g. "mantic", "focal") - will build for all supported releases if not specified'
         type: string
         required: false
@@ -46,7 +46,7 @@ jobs:
               releases="${releases}'${r}'"
           done
 
-          echo matrix=\"${releases}\" >> $GITHUB_OUTPUT
+          echo matrix="${releases}" >> $GITHUB_OUTPUT
   build-template:
     name: Build VM template
     runs-on: ubuntu-latest
@@ -54,7 +54,7 @@ jobs:
       - supported-releases
     strategy:
       matrix:
-        codename: ${{ fromJSON(format('[{0}]', inputs.codename || needs.supported-releases.outputs.matrix)) }}
+        codename: ${{ fromJSON(format('[{0}]', inputs.codenames || needs.supported-releases.outputs.matrix)) }}
       fail-fast: false
     steps:
       - uses: azure/login@v1
