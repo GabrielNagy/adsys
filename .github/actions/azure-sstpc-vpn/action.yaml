@@ -17,7 +17,7 @@ inputs:
   routes:
     description: Routes to add after connecting
     required: false
-    default: ''
+    default: 10.1.0.0/16
 
 runs:
   using: 'composite'
@@ -77,7 +77,7 @@ runs:
     - name: Wait for VPN connection to be up
       shell: bash
       run: |
-        timeout 30 bash -c 'while ! ip a | grep ppp0 | grep -q UP; do sleep 1; done'
+        timeout 30 bash -c 'while ! ip a | grep ppp0 | grep -q ,UP; do sleep 5; done'
     - name: Add routes if requested
       shell: bash
       if: ${{ inputs.routes }} != ''
