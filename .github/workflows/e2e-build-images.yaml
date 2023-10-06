@@ -1,4 +1,5 @@
 name: Build image templates for E2E tests
+concurrency: build-templates
 
 on:
   workflow_dispatch:
