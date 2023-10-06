@@ -58,12 +58,6 @@ The machine must be connected to the ADSys integration tests VPN.`, filepath.Bas
 	cmd.AddBoolFlag(&preserve, "preserve", false, "")
 	cmd.AddBoolFlag(&preserve, "p", false, "")
 
-	uuid := uuid.NewString()
-	cmd.Inventory = inventory.Inventory{
-		Codename: codename,
-		UUID:     uuid,
-	}
-
 	return cmd.Execute(context.Background())
 }
 
@@ -88,6 +82,12 @@ func validate(_ context.Context, _ *command.Command) error {
 }
 
 func action(ctx context.Context, cmd *command.Command) error {
+	uuid := uuid.NewString()
+	cmd.Inventory = inventory.Inventory{
+		Codename: codename,
+		UUID:     uuid,
+	}
+
 	inv := cmd.Inventory
 	vmName := fmt.Sprintf("adsys-integration-%s-%s", inv.Codename, inv.UUID)
 
