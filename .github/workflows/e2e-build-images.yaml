@@ -1,5 +1,4 @@
 name: Build image templates for E2E tests
-concurrency: build-templates
 
 on:
   workflow_dispatch:
@@ -47,9 +46,12 @@ jobs:
           done
 
           echo matrix="${releases}" >> $GITHUB_OUTPUT
+
   build-template:
     name: Build VM template
     runs-on: ubuntu-latest
+    concurrency:
+      group: template-build-${{ matrix.codename }}
     needs:
       - supported-releases
     strategy:
