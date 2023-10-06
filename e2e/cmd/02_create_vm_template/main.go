@@ -4,14 +4,12 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/maruel/natural"
 	log "github.com/sirupsen/logrus"
 	"github.com/ubuntu/adsys/e2e/internal/az"
 	"github.com/ubuntu/adsys/e2e/internal/command"
@@ -60,12 +58,13 @@ func action(ctx context.Context, cmd *command.Command) error {
 	inv := cmd.Inventory
 
 	imageDefinition := fmt.Sprintf("ubuntu-desktop-%s", inv.Codename)
-	latestImageVersion, err := latestImageVersion(ctx, imageDefinition)
+	latestImageVersion, err := az.LatestImageVersion(ctx, imageDefinition)
 	if err != nil {
 		return err
 	}
 
-	nextImageVersion := incrementVersion(latestImageVersion)
+	isDevelopmentVersion := strings.Contains(cmd.Inventory.BaseVMImage, "daily")
+	nextImageVersion := incrementVersion(latestImageVersion, isDevelopmentVersion)
 	// If the version is empty, we need to create the image definition
 	if latestImageVersion == "" {
 		log.Infof("Creating image definition %q", imageDefinition)
@@ -120,47 +119,26 @@ func action(ctx context.Context, cmd *command.Command) error {
 	return nil
 }
 
-func latestImageVersion(ctx context.Context, imageDefinition string) (string, error) {
-	out, _, err := az.RunCommand(ctx, "sig", "image-version", "list",
-		"--resource-group", "AD",
-		"--gallery-name", "AD",
-		"--gallery-image-definition", imageDefinition,
-	)
-	if err != nil {
-		return "", err
+func incrementVersion(version string, dev bool) string {
+	firstVersion := "0.0.1"
+	if dev {
+		firstVersion += "dev"
 	}
 
-	var versions []imageVersion
-	if err := json.Unmarshal(out, &versions); err != nil {
-		return "", err
-	}
-	if len(versions) == 0 {
-		return "", nil
-	}
-
-	log.Debugf("Found %d image versions: %s", len(versions), versions)
-
-	latestVersion := "0.0.0"
-	for _, v := range versions {
-		if natural.Less(latestVersion, v.Version) {
-			latestVersion = v.Version
-		}
-	}
-
-	return latestVersion, nil
-}
-
-func incrementVersion(version string) string {
 	parts := strings.Split(version, ".")
 	if len(parts) != 3 {
-		return "0.0.1"
+		return firstVersion
 	}
 
 	patch, err := strconv.Atoi(parts[2])
 	if err != nil {
-		return "0.0.1"
+		return firstVersion
 	}
 	patch++
 
-	return fmt.Sprintf("%s.%d", strings.Join(parts[:2], "."), patch)
+	v := fmt.Sprintf("%s.%d", strings.Join(parts[:2], "."), patch)
+	if dev {
+		v += "dev"
+	}
+	return v
 }

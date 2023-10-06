@@ -180,11 +180,14 @@ func (c *Command) Execute(ctx context.Context) int {
 		return 1
 	}
 
-	c.Inventory.State = c.toState
-	log.Debugf("Writing inventory file: %+v", c.Inventory)
-	if err := inventory.Write(c.GlobalFlags.InventoryFile, c.Inventory); err != nil {
-		log.Error(err)
-		return 1
+	// Don't write the state if we're transitioning to Null
+	if c.toState != inventory.Null {
+		c.Inventory.State = c.toState
+		log.Debugf("Writing inventory file: %+v", c.Inventory)
+		if err := inventory.Write(c.GlobalFlags.InventoryFile, c.Inventory); err != nil {
+			log.Error(err)
+			return 1
+		}
 	}
 
 	return 0

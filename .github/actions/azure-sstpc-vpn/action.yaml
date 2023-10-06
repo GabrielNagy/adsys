@@ -74,13 +74,11 @@ runs:
       shell: bash
       run: |
         sudo pon azure-vpn
-    - name: Wait for VPN connection to be established
+    - name: Wait for VPN connection to be up
       shell: bash
       run: |
-        while ! ip a | grep ppp0 | grep UP; do
-          sleep 1
-        done
-    - name: Add routes
+        timeout 30 bash -c 'while ! ip a | grep ppp0 | grep -q UP; do sleep 1; done'
+    - name: Add routes if requested
       shell: bash
       if: ${{ inputs.routes }} != ''
       env:

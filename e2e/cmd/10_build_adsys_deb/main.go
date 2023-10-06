@@ -104,6 +104,7 @@ func action(ctx context.Context, cmd *command.Command) error {
 	if err != nil {
 		return fmt.Errorf("failed to run container: %w: %s", err, string(out))
 	}
+	log.Debugf("docker run output: %s", string(out))
 
 	cmd.Inventory.Codename = codename
 

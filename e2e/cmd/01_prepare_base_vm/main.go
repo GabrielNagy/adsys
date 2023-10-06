@@ -80,8 +80,8 @@ func validate(_ context.Context, _ *command.Command) error {
 		return fmt.Errorf("SSH key %q does not exist: %w", sshKey, err)
 	}
 
-	if vmImage == "" || codename == "" {
-		return errors.New("vm-image and codename must be specified")
+	if codename == "" {
+		return errors.New("codename must be specified")
 	}
 
 	return nil
@@ -213,6 +213,7 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ubuntu-desktop realmd nfs
 
 	cmd.Inventory.IP = ipAddress
 	cmd.Inventory.VMID = id
+	cmd.Inventory.BaseVMImage = vmImage
 	cmd.Inventory.VMName = vmName
 	cmd.Inventory.SSHKeyPath = sshKey
 
