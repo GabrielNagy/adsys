@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -141,7 +140,6 @@ func (c Client) Run(ctx context.Context, cmd string) ([]byte, error) {
 }
 
 // Upload uploads the given local file to the remote host.
-// TODO: use concurrent upload to speed up the process... or just use scp.
 func (c Client) Upload(localPath string, remotePath string) error {
 	log.Infof("Uploading %q to %q on host %q", localPath, remotePath, c.RemoteAddr().String())
 	local, err := os.Open(localPath)
@@ -150,7 +148,12 @@ func (c Client) Upload(localPath string, remotePath string) error {
 	}
 	defer local.Close()
 
-	ftp, err := sftp.NewClient(c.Client)
+	ftp, err := sftp.NewClient(c.Client,
+		sftp.UseConcurrentReads(true),
+		sftp.UseConcurrentWrites(true),
+		sftp.MaxConcurrentRequestsPerFile(64),
+		sftp.MaxPacketUnchecked(1<<17),
+	)
 	if err != nil {
 		return err
 	}
@@ -171,7 +174,7 @@ func (c Client) Upload(localPath string, remotePath string) error {
 	}
 	defer remote.Close()
 
-	if _, err := io.Copy(remote, local); err != nil {
+	if _, err := remote.ReadFrom(local); err != nil {
 		return err
 	}
 	log.Info("File uploaded successfully")

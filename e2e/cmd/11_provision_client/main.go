@@ -1,5 +1,6 @@
 // Package main provides a script to create a disposable Ubuntu VM on Azure,
-// join it to the integration tests domain and install the adsys package.
+// join it to the integration tests domain and install the previously built
+// adsys package.
 package main
 
 import (
@@ -11,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
 	"github.com/ubuntu/adsys/e2e/internal/az"
 	"github.com/ubuntu/adsys/e2e/internal/command"
@@ -42,7 +42,8 @@ that will be provisioned. The AD password must be set in the AD_PASSWORD
 environment variable.
 
 Options:
- --ssh-key               SSH private key to use for authentication (default: ~/.ssh/id_rsa)
+ --ssh-key           SSH private key to use for authentication (default: ~/.ssh/id_rsa)
+ -p, --preserve      Don't destroy VM if provisioning fails (default: false)
 
 This script will:
  - create a VM from the specified codename
@@ -57,16 +58,10 @@ This script will:
 }
 
 func validate(_ context.Context, _ *command.Command) error {
-	if sshKey == "" {
-		sshKey = "~/.ssh/id_rsa"
-	}
-	expandedKeyPath, err := homedir.Expand(sshKey)
+	var err error
+	sshKey, err = command.ValidateAndExpandPath(sshKey, command.DefaultSSHKeyPath)
 	if err != nil {
-		return fmt.Errorf("failed to get SSH key path: %w", err)
-	}
-	sshKey = expandedKeyPath
-	if _, err := os.Stat(sshKey); err != nil {
-		return fmt.Errorf("SSH key %q does not exist: %w", sshKey, err)
+		return err
 	}
 
 	adPassword = os.Getenv("AD_PASSWORD")
@@ -153,9 +148,6 @@ func action(ctx context.Context, cmd *command.Command) error {
 	ipAddress := vm.IP
 	id := vm.ID
 
-	log.Infof("VM IP address: %s", ipAddress)
-	log.Infof("VM ID: %s", id)
-
 	client, err := remote.NewClient(ipAddress, "root", sshKey)
 	if err != nil {
 		return fmt.Errorf("failed to connect to VM: %w", err)
@@ -187,6 +179,7 @@ func action(ctx context.Context, cmd *command.Command) error {
 	log.Infof("Installing adsys package...")
 	_, err = client.Run(ctx, "apt-get -y update && DEBIAN_FRONTEND=noninteractive apt-get install -y /debs/*.deb")
 
+	cmd.Inventory.IP = ipAddress
 	cmd.Inventory.VMID = id
 	cmd.Inventory.UUID = uuid
 	cmd.Inventory.VMName = vmName

@@ -11,8 +11,14 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
 	"github.com/ubuntu/adsys/e2e/internal/inventory"
+)
+
+const (
+	// DefaultSSHKeyPath is the default path to the SSH private key.
+	DefaultSSHKeyPath = "~/.ssh/id_rsa"
 )
 
 type cmdFunc func(context.Context, *Command) error
@@ -82,6 +88,24 @@ func New(action cmdFunc, args ...Option) *Command {
 		fromState: opts.fromState,
 		toState:   opts.toState,
 	}
+}
+
+// ValidateAndExpandPath expands the given path, checks if it exists and falls
+// back to the given default if not.
+func ValidateAndExpandPath(path, def string) (string, error) {
+	if path == "" {
+		path = def
+	}
+	expandedPath, err := homedir.Expand(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to expand path: %w", err)
+	}
+	path = expandedPath
+	if _, err := os.Stat(path); err != nil {
+		return "", fmt.Errorf("path %q does not exist: %w", path, err)
+	}
+
+	return path, nil
 }
 
 // AddStringFlag adds a string flag to the command.

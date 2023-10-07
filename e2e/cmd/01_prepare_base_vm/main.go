@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 
 	"github.com/google/uuid"
-	"github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
 	"github.com/ubuntu/adsys/e2e/internal/az"
 	"github.com/ubuntu/adsys/e2e/internal/command"
@@ -62,16 +61,10 @@ The machine must be connected to the ADSys integration tests VPN.`, filepath.Bas
 }
 
 func validate(_ context.Context, _ *command.Command) error {
-	if sshKey == "" {
-		sshKey = "~/.ssh/id_rsa"
-	}
-	expandedKeyPath, err := homedir.Expand(sshKey)
+	var err error
+	sshKey, err = command.ValidateAndExpandPath(sshKey, command.DefaultSSHKeyPath)
 	if err != nil {
-		return fmt.Errorf("failed to get SSH key path: %w", err)
-	}
-	sshKey = expandedKeyPath
-	if _, err := os.Stat(sshKey); err != nil {
-		return fmt.Errorf("SSH key %q does not exist: %w", sshKey, err)
+		return err
 	}
 
 	if codename == "" {
@@ -139,9 +132,6 @@ func action(ctx context.Context, cmd *command.Command) error {
 	}
 	ipAddress := vm.IP
 	id := vm.ID
-
-	log.Infof("VM IP address: %s", ipAddress)
-	log.Infof("VM ID: %s", id)
 
 	client, err := remote.NewClient(ipAddress, "azureuser", sshKey)
 	if err != nil {

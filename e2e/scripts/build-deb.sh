@@ -68,12 +68,12 @@ mk-build-deps -ir -t "apt-get -o Debug::pkgProblemResolver=yes -y --no-install-r
 log "Building package"
 DEB_BUILD_OPTIONS=nocheck debuild -b -uc -us --sanitize-env
 
-cd /
-
+mkdir -p /output/${codename}
 # Copy packages to output dir with user's permissions
 if [ -n "${USER+x}" ] && [ -n "${GROUP+x}" ]; then
-    chown -R "${USER}:${GROUP}" /build
+    chown -R "${USER}:${GROUP}" /build /output
 fi
+
 cp -a /build/*.deb /output/
 ls -l -A --color=auto -h /output
 

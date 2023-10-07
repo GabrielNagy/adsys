@@ -1,5 +1,5 @@
-// Package main provides a script to create a base VM that can be turned into a
-// template for integration tests.
+// Package main provides a script that checks for an existing Azure image for
+// the given Ubuntu codename.
 package main
 
 import (

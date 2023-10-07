@@ -14,12 +14,13 @@ import (
 )
 
 func TestAddFlags(t *testing.T) {
+	inventoryPath := filepath.Join(t.TempDir(), "inventory.yaml")
 	cmd := command.New(mockAction, command.WithStateTransition(inventory.Null, inventory.TemplateCreated))
 
 	args := []string{"my_command"}
 	initOsArgs := os.Args
 	defer func() { os.Args = initOsArgs }()
-	os.Args = append(args, "-string", "test", "-bool")
+	os.Args = append(args, "--string", "test", "--bool", "--inventory-file", inventoryPath)
 
 	var s string
 	var b bool
@@ -71,7 +72,7 @@ func TestInventory(t *testing.T) {
 				tc.existingInventory = "inventory.yaml"
 			}
 			inventoryPath := filepath.Join(tempDir, "inventory", tc.existingInventory)
-			os.Args = append(args, "-inventory-file", inventoryPath)
+			os.Args = append(args, "--inventory-file", inventoryPath)
 
 			cmd := command.New(mockAction, command.WithStateTransition(tc.fromState, tc.toState))
 			ret := cmd.Execute(context.Background())
@@ -123,7 +124,7 @@ func TestExecute(t *testing.T) {
 			args := []string{"my_command"}
 			initOsArgs := os.Args
 			defer func() { os.Args = initOsArgs }()
-			os.Args = append(args, "-inventory-file", filepath.Join(t.TempDir(), "inventory.yaml"))
+			os.Args = append(args, "--inventory-file", filepath.Join(t.TempDir(), "inventory.yaml"))
 
 			cmd := command.New(tc.action, opts...)
 			ret := cmd.Execute(context.Background())

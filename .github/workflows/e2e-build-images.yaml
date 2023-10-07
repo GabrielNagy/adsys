@@ -8,9 +8,11 @@ on:
         type: string
         required: false
       force:
-        description: 'Force building the template even if it already exists'
+        description: 'Force building new templates even if they already exist'
         type: boolean
         required: false
+  schedule:
+    - cron: '42 0 * * 0' # 00:42 UTC every Sunday
 
 jobs:
   supported-releases:

@@ -1,5 +1,5 @@
-// Package main provides a script to generalize an Azure VM to be used as a
-// template for integration tests.
+// Package main provides a script to build adsys as a deb package for the given
+// codename using a Docker container.
 package main
 
 import (
