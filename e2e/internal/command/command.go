@@ -181,8 +181,8 @@ func (c *Command) Execute(ctx context.Context) int {
 	}
 
 	// Don't write the state if we're transitioning to Null
-	if c.toState != inventory.Null {
-		c.Inventory.State = c.toState
+	c.Inventory.State = c.toState
+	if c.Inventory.State != inventory.Null {
 		log.Debugf("Writing inventory file: %+v", c.Inventory)
 		if err := inventory.Write(c.GlobalFlags.InventoryFile, c.Inventory); err != nil {
 			log.Error(err)

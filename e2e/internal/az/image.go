@@ -24,6 +24,12 @@ type imageVersion struct {
 	Version string `json:"name"`
 }
 
+// ImageDefinitionName returns the name of the image definition for the given
+// codename.
+func ImageDefinitionName(codename string) string {
+	return fmt.Sprintf("ubuntu-desktop-%s", codename)
+}
+
 // Images returns a list of Azure images for the given codename.
 func Images(ctx context.Context, codename string) ([]Image, error) {
 	out, _, err := RunCommand(ctx, "vm", "image", "list",

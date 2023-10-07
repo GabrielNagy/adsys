@@ -141,7 +141,7 @@ func (c Client) Run(ctx context.Context, cmd string) ([]byte, error) {
 }
 
 // Upload uploads the given local file to the remote host.
-// TODO: use concurrent upload to speed up the process... or just use scp
+// TODO: use concurrent upload to speed up the process... or just use scp.
 func (c Client) Upload(localPath string, remotePath string) error {
 	log.Infof("Uploading %q to %q on host %q", localPath, remotePath, c.RemoteAddr().String())
 	local, err := os.Open(localPath)

@@ -26,21 +26,19 @@ func run() int {
 	cmd := command.New(action, command.WithValidateFunc(validate))
 	cmd.Usage = fmt.Sprintf(`go run ./%s [options]
 
-Checks if the given codename is available as an Azure VM image. Prioritizes
-stable image releases as opposed to daily builds, but allows daily images if no
-stable image is available.
+Checks if the given Ubuntu codename is available as an Azure VM image.
+Prioritizes stable image releases as opposed to daily builds, but allows daily
+images if no stable image is available.
+
+Prints the Azure URN of the image to use for the given codename. If a custom
+image template already exists for the given codename, the script will exit with
+an error unless the --force flag is set or the image is an upgrade from daily to
+stable.
 
 Options:
  --codename              Required: codename of the Ubuntu release (e.g. focal)
  -f, --force             Force the script to return the latest image URN
                          regardless of whether we have a custom image or not
-
-This script will:
- - check if an image exists in the Marketplace for the given codename
- - checks if we have a custom integration tests image for the given codename
- - if neither exist, it will exit with code 1 and print the VM image name
- - exit with 0 if an image exists for the given codename
- - if the --force flag is set, it will print the latest image URN and exit with 0
 `, filepath.Base(os.Args[0]))
 	cmd.AddStringFlag(&codename, "codename", "", "")
 	cmd.AddBoolFlag(&force, "force", false, "")
@@ -57,7 +55,7 @@ func validate(_ context.Context, _ *command.Command) error {
 	return nil
 }
 
-func action(ctx context.Context, cmd *command.Command) error {
+func action(ctx context.Context, _ *command.Command) error {
 	availableImages, err := az.Images(ctx, codename)
 	if err != nil {
 		return err
@@ -77,7 +75,7 @@ func action(ctx context.Context, cmd *command.Command) error {
 		image = availableImages[stableIdx]
 	}
 
-	imageDefinition := fmt.Sprintf("ubuntu-desktop-%s", codename)
+	imageDefinition := az.ImageDefinitionName(codename)
 	latestImageVersion, err := az.LatestImageVersion(ctx, imageDefinition)
 	if err != nil {
 		return fmt.Errorf("failed to get latest image version: %w", err)

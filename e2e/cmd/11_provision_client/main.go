@@ -109,7 +109,7 @@ func action(ctx context.Context, cmd *command.Command) error {
 	out, _, err = az.RunCommand(ctx, "vm", "create",
 		"--resource-group", "AD",
 		"--name", vmName,
-		"--image", fmt.Sprintf("/subscriptions/%s/resourceGroups/AD/providers/Microsoft.Compute/galleries/AD/images/ubuntu-desktop-%s", subscriptionID, codename),
+		"--image", fmt.Sprintf("/subscriptions/%s/resourceGroups/AD/providers/Microsoft.Compute/galleries/AD/images/%s", subscriptionID, az.ImageDefinitionName(codename)),
 		"--specialized",
 		"--security-type", "TrustedLaunch",
 		"--size", "Standard_B2s",

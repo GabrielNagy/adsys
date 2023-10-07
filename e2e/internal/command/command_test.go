@@ -40,13 +40,15 @@ func TestInventory(t *testing.T) {
 
 		existingInventory string
 
-		wantErr bool
+		wantErr    bool
+		wantNoFile bool
 	}{
-		"From null state doesn't require existing data": {},
-		"From existing state requires existing data":    {fromState: inventory.TemplateCreated, existingInventory: "inventory_from_template_created"},
+		"From null state doesn't require existing data": {toState: inventory.BaseVMCreated},
+		"From existing state requires existing data":    {fromState: inventory.BaseVMCreated, toState: inventory.TemplateCreated, existingInventory: "inventory_from_template_created"},
+		"To null state doesn't write data":              {toState: inventory.Null, wantNoFile: true},
 
 		"Error if inventory file is required and doesn't exist":  {fromState: inventory.TemplateCreated, wantErr: true},
-		"Error if inventory state does not match expected state": {fromState: inventory.BaseVMCreated, existingInventory: "inventory_from_template_created", wantErr: true},
+		"Error if inventory state does not match expected state": {fromState: inventory.TemplateCreated, existingInventory: "inventory_from_template_created", wantErr: true},
 	}
 
 	for name, tc := range tests {
@@ -68,7 +70,8 @@ func TestInventory(t *testing.T) {
 			if tc.existingInventory == "" {
 				tc.existingInventory = "inventory.yaml"
 			}
-			os.Args = append(args, "-inventory-file", filepath.Join(tempDir, "inventory", tc.existingInventory))
+			inventoryPath := filepath.Join(tempDir, "inventory", tc.existingInventory)
+			os.Args = append(args, "-inventory-file", inventoryPath)
 
 			cmd := command.New(mockAction, command.WithStateTransition(tc.fromState, tc.toState))
 			ret := cmd.Execute(context.Background())
@@ -77,6 +80,13 @@ func TestInventory(t *testing.T) {
 				require.NotZero(t, ret, "Execute should have returned an error but it didn't")
 				return
 			}
+
+			if tc.wantNoFile {
+				require.NoFileExists(t, inventoryPath, "Inventory file should not exist on the disk")
+			} else {
+				require.FileExists(t, inventoryPath, "Inventory file should exist on the disk")
+			}
+
 			require.Zero(t, ret, "Execute should have succeeded but it didn't")
 			require.Equal(t, tc.toState, cmd.Inventory.State, "Inventory state should have been updated")
 		})

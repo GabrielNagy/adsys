@@ -30,14 +30,16 @@ func run() int {
 	)
 	cmd.Usage = fmt.Sprintf(`go run ./%s [options]
 
-Generalize an Azure VM to use as a template for integration tests.
+Build adsys as a deb package for the given Ubuntu release. Artifacts will be
+placed in the output/ directory relative to the root of the repository.
 
 Options:
  --codename       Required: codename of the Ubuntu release to build for (e.g. focal)
- -p, --preserve   Don't delete the build container after finishing (default: false)
+ -p, --preserve   Don't remove the build container after finishing (default: false)
 
 This script will:
  - build the adsys package in a Docker container from the current source tree for the given codename
+
 `, filepath.Base(os.Args[0]))
 
 	cmd.AddStringFlag(&codename, "codename", "", "")
@@ -50,7 +52,6 @@ This script will:
 func validate(_ context.Context, _ *command.Command) error {
 	if codename == "" {
 		return errors.New("codename is required")
-
 	}
 	return nil
 }
@@ -64,8 +65,8 @@ func action(ctx context.Context, cmd *command.Command) error {
 	}
 
 	log.Infof("Preparing build container %q", dockerTag)
-	// Build the container
-	out, err := exec.Command(
+	// #nosec G204: this is only for tests, under controlled args
+	out, err := exec.CommandContext(ctx,
 		"docker", "build", "-t", dockerTag,
 		"--build-arg", fmt.Sprintf("CODENAME=%s", codename),
 		"--file", filepath.Join(scriptsDir, "Dockerfile.build"), ".",
@@ -88,14 +89,14 @@ func action(ctx context.Context, cmd *command.Command) error {
 	dockerArgs = append(dockerArgs,
 		"-v", fmt.Sprintf("%s:/source-ro:ro", adsysRootDir),
 		"-v", fmt.Sprintf("%s/output:/output", adsysRootDir),
-		"-v", fmt.Sprintf("%s/build-deb.sh:/build-helper.sh:ro", scriptsDir),
+		"-v", fmt.Sprintf("%s/build-deb.sh:/build-deb.sh:ro", scriptsDir),
 		"-v", fmt.Sprintf("%s/patches:/patches:ro", scriptsDir),
 		// This is to set correct permissions on the output directory
 		"-e", fmt.Sprintf("USER=%d", os.Getuid()),
 		"-e", fmt.Sprintf("GROUP=%d", os.Getgid()),
 		"--tmpfs", "/tmp:exec",
 		dockerTag,
-		"/build-helper.sh",
+		"/build-deb.sh",
 	)
 
 	log.Info("Building adsys package")

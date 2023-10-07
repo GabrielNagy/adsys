@@ -20,10 +20,6 @@ import (
 var version string
 var preserve bool
 
-type imageVersion struct {
-	Version string `json:"name"`
-}
-
 func main() {
 	os.Exit(run())
 }
@@ -58,7 +54,7 @@ The machine must be authenticated to Azure via the Azure CLI.`, filepath.Base(os
 func action(ctx context.Context, cmd *command.Command) error {
 	inv := cmd.Inventory
 
-	imageDefinition := fmt.Sprintf("ubuntu-desktop-%s", inv.Codename)
+	imageDefinition := az.ImageDefinitionName(inv.Codename)
 	latestImageVersion, err := az.LatestImageVersion(ctx, imageDefinition)
 	if err != nil {
 		return err
