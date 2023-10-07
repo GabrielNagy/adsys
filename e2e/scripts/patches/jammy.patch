@@ -1,0 +1,44 @@
+diff --git a/debian/control b/debian/control
+index d6fb19f2..85eab447 100644
+--- a/debian/control
++++ b/debian/control
+@@ -5,7 +5,7 @@ Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+ Build-Depends: debhelper-compat (= 13),
+                dh-apport,
+                dh-golang,
+-               golang-go (>= 2:1.20~),
++               golang-go (>= 2:1.18~),
+                libsmbclient-dev,
+                libdbus-1-dev,
+                libglib2.0-dev,
+diff --git a/internal/policies/mount/handler.go b/internal/policies/mount/handler.go
+index 45eb149e..e4bcf41c 100644
+--- a/internal/policies/mount/handler.go
++++ b/internal/policies/mount/handler.go
+@@ -86,9 +86,12 @@ func RunMountForCurrentUser(ctx context.Context, filepath string) error {
+        for range entries {
+                m := <-mountsChan
+                logMsg := fmt.Sprintf("Successfully mounted %q", m.path)
++               errMsg := fmt.Errorf("failed to mount %q: %w", m.path, m.err)
+                if m.err != nil {
+                        logMsg = fmt.Sprintf("Failed to mount %q: %v", m.path, m.err)
+-                       err = errors.Join(err, fmt.Errorf("failed to mount %q: %w", m.path, m.err))
++                       err = fmt.Errorf("%w: %w", err, errMsg)
++               } else {
++                       err = errMsg
+                }
+                log.Debugf(ctx, logMsg)
+        }
+@@ -115,7 +118,11 @@ func parseEntries(filepath string) ([]mountEntry, error) {
+                        continue
+                }
+
+-               line, krb := strings.CutPrefix(line, "[krb5]")
++               var krb bool
++               if strings.HasPrefix(line, "[krb5]") {
++                       krb = true
++                       line = strings.TrimPrefix(line, "[krb5]")
++               }
+                entries = append(entries, mountEntry{path: line, krbAuth: krb})
+        }
+
