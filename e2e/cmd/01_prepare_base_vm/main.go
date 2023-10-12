@@ -40,6 +40,7 @@ Options:
                          image (e.g. Ubuntu2204, canonical:0001-com-ubuntu-server-focal:20_04-lts-gen2:latest)
  --codename              Required: codename of the Ubuntu release (e.g. focal)
  --ssh-key               SSH private key to use for authentication (default: ~/.ssh/id_rsa)
+ # TODO change to keep
  -p, --preserve          Don't destroy VM if template creation fails (default: false)
 
 This script will:
@@ -140,6 +141,8 @@ func action(ctx context.Context, cmd *command.Command) error {
 	defer client.Close()
 
 	// Install required dependencies
+	// TODO use eatmydata and manually fsync afterwards
+	// TODO recommend nfs-common and cifs-utils in adsys, and check
 	log.Infof("Installing required packages on VM...")
 	out, err = client.Run(ctx, `sudo DEBIAN_FRONTEND=noninteractive apt-get update && \
 sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y && \
@@ -170,7 +173,7 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ubuntu-desktop realmd nfs
 	if err != nil {
 		return fmt.Errorf("failed to create cloud-init script directory: %w", err)
 	}
-	_, err = client.Run(ctx, "sudo cp /home/azureuser/provision.sh /var/lib/cloud/scripts/per-once/provision.sh")
+	_, err = client.Run(ctx, "sudo mv /home/azureuser/provision.sh /var/lib/cloud/scripts/per-once/provision.sh")
 	if err != nil {
 		return fmt.Errorf("failed to copy cloud-init script: %w", err)
 	}

@@ -82,6 +82,7 @@ func action(ctx context.Context, _ *command.Command) error {
 	}
 
 	// The release is still in development and we already have a daily image built, nothing to do
+	// TODO print message on stderr and exit with 0 if it's not a real error
 	if natural.Less(latestImageVersion, "1.0.0") && stableIdx == -1 && !force {
 		return fmt.Errorf("no stable image found for codename %q and development image already exists", codename)
 	}

@@ -77,11 +77,11 @@ jobs:
         continue-on-error: true
         id: check-vm-template
         run: |
-          set -o pipefail
+          set -euo pipefail
           if [ "${{ inputs.force }}" = "true" ]; then
               force="--force"
           fi
-          go run ./e2e/cmd/00_check_vm_image --codename ${{ matrix.codename }} ${force} | tee image_urn.txt
+          go run ./e2e/cmd/00_check_vm_image --codename ${{ matrix.codename }} ${force} > image_urn.txt
 
       # These steps only run if the template needs to be created
       - name: Set up VPN connection

@@ -89,6 +89,7 @@ func action(ctx context.Context, cmd *command.Command) error {
 	}
 
 	uuid := uuid.NewString()
+	// TODO differentiate between test VMs and template base VMs
 	vmName := fmt.Sprintf("adsys-integration-%s-%s", codename, uuid)
 
 	// Get subscription ID
@@ -170,7 +171,7 @@ func action(ctx context.Context, cmd *command.Command) error {
 	}
 
 	log.Infof("Joining VM to domain...")
-	_, err = client.Run(ctx, fmt.Sprintf("realm join warthogs.biz -U localadmin -v <<<'%s'", adPassword))
+	_, err = client.Run(ctx, fmt.Sprintf("realm join warthogs.biz -U localadmin -v --unattended <<<'%s'", adPassword))
 	if err != nil {
 		return fmt.Errorf("failed to join VM to domain: %w", err)
 	}

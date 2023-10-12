@@ -34,15 +34,6 @@ apt-get autoremove -y
 log "Cleaning apt package cache"
 apt-get autoclean
 
-# Install extra dependencies that were provided for the build (if any)
-#   Note: dpkg can fail due to dependencies, ignore errors, and use
-#   apt-get to install those afterwards
-if [ -d /dependencies ]; then
-    log "Installing dependencies"
-    dpkg -i /dependencies/*.deb
-    apt-get -f install -y --no-install-recommends
-fi
-
 # Make read-write copy of source code
 log "Copying source directory"
 mkdir -p /build
@@ -62,6 +53,8 @@ fi
 
 # Install build dependencies
 log "Installing build dependencies"
+# TODO: replace
+# apt-get -y build-dep .
 mk-build-deps -ir -t "apt-get -o Debug::pkgProblemResolver=yes -y --no-install-recommends"
 
 # Build packages
