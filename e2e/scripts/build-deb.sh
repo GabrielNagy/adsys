@@ -53,9 +53,7 @@ fi
 
 # Install build dependencies
 log "Installing build dependencies"
-# TODO: replace
-# apt-get -y build-dep .
-mk-build-deps -ir -t "apt-get -o Debug::pkgProblemResolver=yes -y --no-install-recommends"
+DEBIAN_FRONTEND=noninteractive apt-get -y build-dep .
 
 # Build packages
 log "Building package"
