@@ -1,5 +1,5 @@
 // Package main provides a script to generalize an Azure VM to be used as a
-// template for integration tests.
+// template for E2E tests.
 package main
 
 import (
@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/maruel/natural"
 	log "github.com/sirupsen/logrus"
 	"github.com/ubuntu/adsys/e2e/internal/az"
 	"github.com/ubuntu/adsys/e2e/internal/command"
@@ -18,7 +17,7 @@ import (
 )
 
 var version string
-var preserve bool
+var keep bool
 
 func main() {
 	os.Exit(run())
@@ -28,12 +27,12 @@ func run() int {
 	cmd := command.New(action, command.WithStateTransition(inventory.BaseVMCreated, inventory.TemplateCreated))
 	cmd.Usage = fmt.Sprintf(`go run ./%s [options]
 
-Generalize an Azure VM to use as a template for integration tests.
+Generalize an Azure VM to use as a template for E2E tests.
 
 Options:
  --version          override the template version number (default behavior is to
                     auto-increment the latest version by 0.0.1)
- -p, --preserve     preserve base VM after creating image version (default: false)
+ -k, --keep         don't destroy base VM after creating image version (default: false)
 
 This script will:
  - create an Azure image definition for the Ubuntu version of the VM unless it already exists
@@ -46,7 +45,8 @@ created by the 00_prepare_base_vm script.
 The machine must be authenticated to Azure via the Azure CLI.`, filepath.Base(os.Args[0]))
 
 	cmd.AddStringFlag(&version, "version", "", "")
-	cmd.AddBoolFlag(&preserve, "preserve", false, "")
+	cmd.AddBoolFlag(&keep, "k", false, "")
+	cmd.AddBoolFlag(&keep, "keep", false, "")
 
 	return cmd.Execute(context.Background())
 }
@@ -61,7 +61,8 @@ func action(ctx context.Context, cmd *command.Command) error {
 	}
 
 	isDevelopmentVersion := strings.Contains(cmd.Inventory.BaseVMImage, "daily")
-	nextImageVersion := incrementVersion(latestImageVersion, isDevelopmentVersion)
+	buildNumber := imageBuildNumber(cmd.Inventory.BaseVMImage)
+	nextImageVersion := constructNewVersion(latestImageVersion, buildNumber, isDevelopmentVersion)
 
 	// Destroy VM if template creation fails
 	defer func() {
@@ -70,7 +71,7 @@ func action(ctx context.Context, cmd *command.Command) error {
 		}
 		log.Error(err)
 
-		if preserve {
+		if keep {
 			log.Infof("Preserving VM as requested...")
 			return
 		}
@@ -94,7 +95,7 @@ func action(ctx context.Context, cmd *command.Command) error {
 			"--os-state", "Specialized",
 			"--hyper-v-generation", "V2",
 			"--features", "SecurityType=TrustedLaunch",
-			"--tags", "project=AD", "subproject=adsys-integration-tests",
+			"--tags", "project=AD", "subproject=adsys-e2e-tests",
 		)
 		if err != nil {
 			return fmt.Errorf("failed to create image definition: %w", err)
@@ -116,14 +117,14 @@ func action(ctx context.Context, cmd *command.Command) error {
 		"--target-regions", "westeurope", "eastus=1=standard_zrs",
 		"--replica-count", "2",
 		"--managed-image", inv.VMID,
-		"--tags", "project=AD", "subproject=adsys-integration-tests",
+		"--tags", "project=AD", "subproject=adsys-e2e-tests",
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create image version: %w", err)
 	}
 
 	// Destroy base VM unless otherwise specified
-	if preserve {
+	if keep {
 		log.Infof("Preserving resource %q as requested", inv.VMID)
 		return nil
 	}
@@ -134,26 +135,41 @@ func action(ctx context.Context, cmd *command.Command) error {
 	return nil
 }
 
-func incrementVersion(version string, dev bool) string {
-	firstVersion := "0.0.1"
-	// Non-development images begin at 1.0.0
-	if !dev {
-		firstVersion = "1.0.0"
-		if natural.Less(version, firstVersion) {
-			return firstVersion
-		}
+// constructNewVersion builds a new version number for the image definition.
+// If the major and minor versions are identical, the patch version is incremented.
+// Otherwise, the patch version is reset to 0.
+func constructNewVersion(prevVersion, buildNumber string, dev bool) string {
+	newMajor := "1"
+	if dev {
+		newMajor = "0"
 	}
+	newMinor := buildNumber
 
-	parts := strings.Split(version, ".")
-	if len(parts) != 3 {
-		return firstVersion
-	}
-
-	patch, err := strconv.Atoi(parts[2])
+	parts := strings.Split(prevVersion, ".")
+	prevMajor := parts[0]
+	prevMinor := parts[1]
+	prevPatch, err := strconv.Atoi(parts[2])
 	if err != nil {
-		return firstVersion
+		return fmt.Sprintf("%s.%s.0", newMajor, newMinor)
 	}
-	patch++
 
-	return fmt.Sprintf("%s.%d", strings.Join(parts[:2], "."), patch)
+	newPatch := prevPatch
+	newPatch++
+	// Reset patch version if major or minor version changed
+	if prevMajor != newMajor || prevMinor != buildNumber {
+		newPatch = 0
+	}
+
+	return fmt.Sprintf("%s.%s.%d", newMajor, buildNumber, newPatch)
+}
+
+// imageBuildNumber returns the build number of the image given a version in the following format
+// Canonical:0001-com-ubuntu-minimal-mantic:minimal-23_10-gen2:23.10.202310110 (202310110).
+func imageBuildNumber(baseVMImage string) string {
+	urnParts := strings.Split(baseVMImage, ":")
+	version := urnParts[len(urnParts)-1]
+	versionParts := strings.Split(version, ".")
+	buildNumber := versionParts[len(versionParts)-1]
+
+	return buildNumber
 }
