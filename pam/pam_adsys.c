@@ -340,7 +340,43 @@ PAM_EXTERN int pam_sm_open_session(pam_handle_t *pamh, int flags, int argc, cons
      */
     const char *krb5ccname = pam_getenv(pamh, "KRB5CCNAME");
     if (krb5ccname == NULL && strcmp(username, "gdm") != 0) {
-        return PAM_IGNORE;
+        // Get the uid of the target user
+        struct passwd *pwd = getpwnam(username);
+        if (pwd == NULL) {
+            pam_syslog(pamh, LOG_ERR, "Failed to get uid of user %s", username);
+            return PAM_IGNORE;
+        }
+
+        // Build the path to the kerberos cache
+        char *ccpath;
+        if (asprintf(&ccpath, "/tmp/krb5cc_%d", pwd->pw_uid) < 0) {
+            pam_syslog(pamh, LOG_CRIT, "out of memory");
+            return PAM_IGNORE;
+        }
+
+        // Check if the file exists
+        if (access(ccpath, F_OK) != 0) {
+            pam_syslog(pamh, LOG_ERR, "KRB5CCNAME is not set and %s does not exist", ccpath);
+            free(ccpath);
+            return PAM_IGNORE;
+        }
+
+        // Set the environment variable
+        char *envvar;
+        if (asprintf(&envvar, "KRB5CCNAME=FILE:%s", ccpath) < 0) {
+            pam_syslog(pamh, LOG_CRIT, "out of memory");
+            free(ccpath);
+            return PAM_BUF_ERR;
+        }
+
+        retval = pam_putenv(pamh, envvar);
+        krb5ccname = strdup(ccpath);
+        _pam_drop(envvar);
+        free(ccpath);
+        if (retval != PAM_SUCCESS) {
+            pam_syslog(pamh, LOG_ERR, "Failed to set KRB5CCNAME to %s", ccpath);
+            return PAM_IGNORE;
+        }
     }
 
     // set dconf profile for AD and gdm user.
@@ -352,7 +388,7 @@ PAM_EXTERN int pam_sm_open_session(pam_handle_t *pamh, int flags, int argc, cons
     /*
       update user policy is only for AD users.
     */
-    if (strcmp(username, "gdm") == 0) {
+    if (strcmp(username, "gdm") == 0 || strcmp(username, "root") == 0) {
         return PAM_IGNORE;
     }
 
@@ -378,6 +414,8 @@ PAM_EXTERN int pam_sm_open_session(pam_handle_t *pamh, int flags, int argc, cons
         }
     }
 
+    pam_syslog(pamh, LOG_ERR, "Username is %s", username);
+    pam_syslog(pamh, LOG_ERR, "Calling update_policy with %s %s", username, krb5ccname);
     return update_policy(pamh, username, krb5ccname, debug);
 }
 
