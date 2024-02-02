@@ -57,7 +57,8 @@ DEBIAN_FRONTEND=noninteractive apt-get -y build-dep .
 
 # Build packages
 log "Building package"
-DEB_BUILD_OPTIONS=nocheck debuild -b -uc -us
+debuild -S
+# DEB_BUILD_OPTIONS=nocheck debuild -b -uc -us
 
 mkdir -p /output/${codename}
 # Copy packages to output dir with user's permissions
@@ -65,7 +66,7 @@ if [ -n "${USER+x}" ] && [ -n "${GROUP+x}" ]; then
     chown -R "${USER}:${GROUP}" /build /output
 fi
 
-cp -a /build/*.deb /output/${codename}
+cp -a /build/* /output/${codename}
 ls -l -A --color=auto -h /output
 
 log "Finished"

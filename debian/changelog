@@ -1,3 +1,9 @@
+adsys (0.13.3ppa2~jammy1) jammy; urgency=medium
+
+  * Infer and set KRB5CCNAME from within the PAM module.
+
+ -- Gabriel Nagy <gabriel.nagy@canonical.com>  Fri, 02 Feb 2024 16:51:12 +0200
+
 adsys (0.13.3) noble; urgency=medium
 
   * Fix cert auto-enroll without NDES (LP: #2051363)
