@@ -61,7 +61,8 @@ func New(ctx context.Context, c Config, bus *dbus.Conn) (s SSS, err error) {
 	}
 	domain := cfg.Section(fmt.Sprintf("domain/%s", sssdDomain)).Key("ad_domain").String()
 	if domain == "" {
-		return SSS{}, errors.New(gotext.Get("could not find AD domain name corresponding to %q", sssdDomain))
+		// If no ad_domain is found, use the sssd domain
+		domain = sssdDomain
 	}
 
 	if defaultDomainSuffix == "" {
