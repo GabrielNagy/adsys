@@ -1,5 +1,7 @@
 # adsys
 
+test
+
 Active Directory GPO support.
 
 [![Code quality](https://github.com/ubuntu/adsys/workflows/QA/badge.svg)](https://github.com/ubuntu/adsys/actions?query=workflow%3AQA)
