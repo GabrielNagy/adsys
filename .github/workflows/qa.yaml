@@ -46,6 +46,12 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - name: Publish coverage as a nightly release asset
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git tag -f nightly
+          git push -f origin nightly
+          gh release upload nightly ./README.md --clobber
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -103,15 +109,18 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       # For quality indicator model partner measure.
-      - name: Publish coverage as a nightly release asset
-        run: gh release upload nightly ./coverage/codecov/Cobertura.xml --clobber
-        uses: softprops/action-gh-release@v1
-        if: github.ref == 'refs/heads/main'
-        with:
-          prerelease: true
-          name: nightly
-          files: ./coverage/codecov/Cobertura.xml
-          fail_on_unmatched_files: true
+      # - name: Publish coverage as a nightly release asset
+      #   if: github.ref == 'refs/heads/main'
+      #   run: |
+      #     git tag -f nightly
+      #     git push -f origin nightly
+      #     gh release upload nightly ./coverage/codecov/Cobertura.xml --clobber
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     prerelease: true
+      #     name: nightly
+      #     files: ./coverage/codecov/Cobertura.xml
+      #     fail_on_unmatched_files: true
 
   adwatchd-tests:
     name: Windows tests for adwatchd
