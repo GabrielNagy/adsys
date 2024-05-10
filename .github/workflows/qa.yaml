@@ -109,18 +109,14 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       # For quality indicator model partner measure.
-      # - name: Publish coverage as a nightly release asset
-      #   if: github.ref == 'refs/heads/main'
-      #   run: |
-      #     git tag -f nightly
-      #     git push -f origin nightly
-      #     gh release upload nightly ./coverage/codecov/Cobertura.xml --clobber
-      #   uses: softprops/action-gh-release@v1
-      #   with:
-      #     prerelease: true
-      #     name: nightly
-      #     files: ./coverage/codecov/Cobertura.xml
-      #     fail_on_unmatched_files: true
+      - name: Publish coverage as a nightly release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          name: nightly
+          tag_name: nightly
+          files: ./coverage/codecov/Cobertura.xml
+          fail_on_unmatched_files: true
 
   adwatchd-tests:
     name: Windows tests for adwatchd
