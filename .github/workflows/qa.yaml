@@ -127,6 +127,11 @@ jobs:
           go build ./cmd/adwatchd
           iscc.exe //DAPP_VERSION=$INSTALLER_VERSION installer/setup.iss
         shell: bash
+      - name: Start SSH session
+        uses: luchihoratiu/debug-via-ssh@main
+        with:
+          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+          SSH_PASS: P@$$word
       - name: Run tests
         run: go test ${{ env.packages }}
       - name: Run tests (with race detector)
