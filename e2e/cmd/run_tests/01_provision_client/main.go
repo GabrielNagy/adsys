@@ -188,6 +188,17 @@ func action(ctx context.Context, cmd *command.Command) error {
 		return fmt.Errorf("failed to install adsys package: %w", err)
 	}
 
+	log.Infof("Recompiling PAM module with coverage support...")
+	if _, err := client.Run(ctx, "DEBIAN_FRONTEND=noninteractive apt-get install -y gcc gcovr libpam0g-dev"); err != nil {
+		return fmt.Errorf("failed to install libpam0g-dev: %w", err)
+	}
+	if err := client.Upload(filepath.Join(adsysRootDir, "pam", "pam_adsys.c"), "/root"); err != nil {
+		return fmt.Errorf("failed to upload pam_adsys.c: %w", err)
+	}
+	if _, err := client.Run(ctx, "gcc -fprofile-arcs -ftest-coverage -O0 -shared -Wl,-soname,libpam_adsys.so -o /usr/lib/x86_64-linux-gnu/security/pam_adsys.so /root/pam_adsys.c -lpam"); err != nil {
+		return fmt.Errorf("failed to compile pam_adsys.c: %w", err)
+	}
+
 	// TODO: remove this once the packages installed below are MIRed and installed by default with adsys
 	// Allow errors here on account on packages not being available on the tested Ubuntu version
 	log.Infof("Installing universe packages required for some policy managers...")

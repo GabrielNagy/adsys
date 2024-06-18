@@ -60,6 +60,17 @@ func action(ctx context.Context, cmd *command.Command) error {
 		return err
 	}
 
+	// Collect PAM module coverage if present
+	if err := client.RequireNoFileExists(ctx, "/usr/lib/x86_64-linux-gnu/security/pam_adsys.so-pam_adsys.gcda"); err != nil {
+		if _, err := client.Run(ctx, "gcovr --cobertura --output=/tmp/pam-cobertura.xml /usr/lib/x86_64-linux-gnu/security"); err != nil {
+			return fmt.Errorf("failed to collect PAM module coverage: %w", err)
+		}
+
+		if err := client.Download("/tmp/pam-cobertura.xml", "output/pam-cobertura.xml"); err != nil {
+			return fmt.Errorf("failed to download PAM module coverage: %w", err)
+		}
+	}
+
 	// Leave realm and delete computer object
 	_, err = client.Run(ctx, fmt.Sprintf("realm leave --remove -U localadmin -v --unattended <<<'%s'", adPassword))
 	if err != nil {
